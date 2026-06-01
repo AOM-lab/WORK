@@ -1,0 +1,159 @@
+Alerta 1 para ataque 1 ouput completo
+@timestamp
+	2026-05-03T16:33:15.666Z
+data_stream.dataset
+	suricata
+data_stream.namespace
+	so
+data_stream.type
+	logs
+destination.ip
+	10.0.0.20
+destination.port
+	80
+dns.query_name
+	|20|Nmap
+ecs.version
+	8.0.0
+elastic_agent.id
+	3cb76ed9-be31-4878-b78b-728f96cba5b0
+elastic_agent.snapshot
+	false
+elastic_agent.version
+	9.0.8
+event.agent_id_status
+	missing
+event.category
+	network
+event.dataset
+	suricata.alert
+event.ingested
+	2026-05-03T16:33:17Z
+event.module
+	suricata
+event.severity
+	3
+event.severity_label
+	high
+input.type
+	filestream
+log.file.device_id
+	64512
+log.file.inode
+	236275844
+log.file.path
+	/nsm/suricata/eve-2026-05-03-16:32.json
+log.id.uid
+	888196159296313
+log.offset
+	19873
+message
+	{"timestamp":"2026-05-03T16:33:15.666413+0000","flow_id":888196159296313,"in_iface":"bond0","event_type":"alert","src_ip":"10.0.0.99","src_port":56818,"dest_ip":"10.0.0.20","dest_port":80,"proto":"TCP","ip_v":4,"pkt_src":"wire/pcap","metadata":{"flowbits":["http.dottedquadhost"]},"community_id":"1:r77EYLHQuD913f4vVXLtqSTTsP0=","tx_id":0,"alert":{"action":"allowed","gid":1,"signature_id":2024364,"rev":5,"signature":"ET SCAN Possible Nmap User-Agent Observed","category":"Web Application Attack","severity":1,"metadata":{"affected_product":["Any"],"attack_target":["Client_and_Server"],"confidence":["Medium"],"created_at":["2017_06_08"],"deployment":["Perimeter"],"performance_impact":["Low"],"reviewed_at":["2024_05_06"],"signature_severity":["Informational"],"updated_at":["2024_03_07"]},"rule":"alert http $HOME_NET any -> any any (msg:\"ET SCAN Possible Nmap User-Agent Observed\"; flow:established,to_server; http.user_agent; content:\"|20|Nmap\"; fast_pattern; classtype:web-application-attack; sid:2024364; rev:5; metadata:affected_product Any, attack_target Client_and_Server, created_at 2017_06_08, deployment Perimeter, performance_impact Low, confidence Medium, signature_severity Informational, updated_at 2024_03_07, reviewed_at 2024_05_06;)"},"app_proto":"http","direction":"to_server","payload_printable":"GET /HNAP1 HTTP/1.1\r\nUser-Agent: Mozilla/5.0 (compatible; Nmap Scripting Engine; https://nmap.org/book/nse.html)\r\nConnection: close\r\nHost: 10.0.0.20\r\n\r\n","stream":1,"packet":"CAAnzAY1CAAnJsCcCABFAAA0MvBAAEAG810KAABjCgAAFN3yAFDquugwJ6Z7VoAQAD9xsQAAAQEICkH//4yTy8bT","packet_info":{"linktype":1,"linktype_name":"EN10MB"},"capture_file":"/nsm/suripcap/1/so-pcap.1777825938"}
+network.community_id
+	1:r77EYLHQuD913f4vVXLtqSTTsP0=
+network.data.decoded
+	GET /HNAP1 HTTP/1.1
+
+User-Agent: Mozilla/5.0 (compatible; Nmap Scripting Engine; https://nmap.org/book/nse.html)
+
+Connection: close
+
+Host: 10.0.0.20
+
+
+
+network.packet_source
+	wire/pcap
+network.private_ip
+	[
+  "10.0.0.99",
+  "10.0.0.20"
+]
+network.transport
+	tcp
+observer.ingress.interface.name
+	bond0
+observer.name
+	aom-onion
+related.ip
+	[
+  "10.0.0.99",
+  "10.0.0.20"
+]
+rule.action
+	allowed
+rule.category
+	Web Application Attack
+rule.gid
+	1
+rule.metadata.affected_product
+	[
+  "Any"
+]
+rule.metadata.attack_target
+	[
+  "Client_and_Server"
+]
+rule.metadata.confidence
+	[
+  "Medium"
+]
+rule.metadata.created_at
+	[
+  "2017_06_08"
+]
+rule.metadata.deployment
+	[
+  "Perimeter"
+]
+rule.metadata.performance_impact
+	[
+  "Low"
+]
+rule.metadata.reviewed_at
+	[
+  "2024_05_06"
+]
+rule.metadata.signature_severity
+	[
+  "Informational"
+]
+rule.metadata.updated_at
+	[
+  "2024_03_07"
+]
+rule.name
+	ET SCAN Possible Nmap User-Agent Observed
+rule.reference
+	https://community.emergingthreats.net
+rule.rev
+	5
+rule.rule
+	alert http $HOME_NET any -> any any (msg:"ET SCAN Possible Nmap User-Agent Observed"; flow:established,to_server; http.user_agent; content:"|20|Nmap"; fast_pattern; classtype:web-application-attack; sid:2024364; rev:5; metadata:affected_product Any, attack_target Client_and_Server, created_at 2017_06_08, deployment Perimeter, performance_impact Low, confidence Medium, signature_severity Informational, updated_at 2024_03_07, reviewed_at 2024_05_06;)
+rule.ruleset
+	Emerging Threats
+rule.severity
+	1
+rule.uuid
+	2024364
+source.ip
+	10.0.0.99
+source.port
+	56818
+suricata.capture_file
+	/nsm/suripcap/1/so-pcap.1777825938
+tags
+	[
+  "alert",
+  "alert"
+]
+soc_id
+	Va6v7p0BXO5HNJ7g4sk5
+soc_score
+	0
+soc_type
+	
+soc_timestamp
+	2026-05-03T16:33:15.666Z
+soc_source
+	aom-onion:.ds-logs-suricata.alerts-so-2026.05.03-000001
