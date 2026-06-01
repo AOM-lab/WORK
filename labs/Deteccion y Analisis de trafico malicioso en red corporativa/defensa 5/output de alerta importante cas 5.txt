@@ -1,0 +1,142 @@
+2026-05-04 12:15:57.503 +00:00
+	zeek.dns
+	10.0.0.20
+	53239
+	10.0.0.99
+	5353
+	udp
+	dnscat.f5b80113257a131766144900b2f1c6d583
+	TXT
+	NOERROR
+	COqxIM2rjut6Sc6Kq6
+	1:SW2wvqfRACcV6uVUK3ab4Y1+TTc=
+@timestamp
+	2026-05-04T12:15:57.503Z
+client.ip
+	10.0.0.20
+client.port
+	53239
+container.id
+	dns.log
+data_stream.dataset
+	zeek
+data_stream.namespace
+	so
+data_stream.type
+	logs
+destination.ip
+	10.0.0.99
+destination.port
+	5353
+dns.answers.name
+	[
+  "TXT 34 f98f01132539f59d0885d3ffff703ac686"
+]
+dns.authoritative
+	false
+dns.highest_registered_domain
+	dnscat.f5b80113257a131766144900b2f1c6d583
+dns.id
+	9366
+dns.parent_domain
+	dnscat
+dns.parent_domain_length
+	6
+dns.query.class
+	1
+dns.query.class_name
+	C_INTERNET
+dns.query.length
+	41
+dns.query.name
+	dnscat.f5b80113257a131766144900b2f1c6d583
+dns.query.rejected
+	false
+dns.query.type
+	16
+dns.query.type_name
+	TXT
+dns.recursion.available
+	true
+dns.recursion.desired
+	true
+dns.reserved
+	0
+dns.resolved_ip
+	[]
+dns.response.code
+	0
+dns.response.code_name
+	NOERROR
+dns.top_level_domain
+	f5b80113257a131766144900b2f1c6d583
+dns.truncated
+	false
+dns.ttls
+	[
+  60
+]
+ecs.version
+	8.0.0
+elastic_agent.id
+	3cb76ed9-be31-4878-b78b-728f96cba5b0
+elastic_agent.snapshot
+	false
+elastic_agent.version
+	9.0.8
+event.agent_id_status
+	missing
+event.category
+	network
+event.dataset
+	zeek.dns
+event.duration
+	0.0006690025329589844
+event.ingested
+	2026-05-04T12:15:59Z
+event.module
+	zeek
+input.type
+	filestream
+log.file.device_id
+	64512
+log.file.inode
+	152857555
+log.file.path
+	/nsm/zeek/logs/current/dns.log
+log.id.uid
+	COqxIM2rjut6Sc6Kq6
+log.offset
+	263232
+message
+	{"ts":1777896957.503471,"uid":"COqxIM2rjut6Sc6Kq6","id.orig_h":"10.0.0.20","id.orig_p":53239,"id.resp_h":"10.0.0.99","id.resp_p":5353,"proto":"udp","trans_id":9366,"rtt":0.0006690025329589844,"query":"dnscat.f5b80113257a131766144900b2f1c6d583","qclass":1,"qclass_name":"C_INTERNET","qtype":16,"qtype_name":"TXT","rcode":0,"rcode_name":"NOERROR","AA":false,"TC":false,"RD":true,"RA":true,"Z":0,"answers":["TXT 34 f98f01132539f59d0885d3ffff703ac686"],"TTLs":[60.0],"rejected":false}
+network.community_id
+	1:SW2wvqfRACcV6uVUK3ab4Y1+TTc=
+network.transport
+	udp
+observer.name
+	aom-onion
+pipeline
+	dns
+server.ip
+	10.0.0.99
+server.port
+	5353
+source.ip
+	10.0.0.20
+source.port
+	53239
+tags
+	[
+  "dns"
+]
+soc_id
+	prPq8p0BXO5HNJ7grpur
+soc_score
+	5.7274237
+soc_type
+	
+soc_timestamp
+	2026-05-04T12:15:57.503Z
+soc_source
+	aom-onion:.ds-logs-zeek-so-2026.05.03-000001
