@@ -1,0 +1,124 @@
+	2026-05-03 17:53:39.108 +00:00
+	zeek.ssh
+	10.0.0.99
+	37470
+	10.0.0.20
+	22
+	2
+	1.0
+	
+	SSH-2.0-libssh_0.11.3
+	SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.16
+	CYlykL28vtiWDufBHg
+@timestamp
+	2026-05-03T17:53:39.108Z
+client.ip
+	10.0.0.99
+client.port
+	37470
+container.id
+	ssh.log
+data_stream.dataset
+	zeek
+data_stream.namespace
+	so
+data_stream.type
+	logs
+destination.ip
+	10.0.0.20
+destination.port
+	22
+ecs.version
+	8.0.0
+elastic_agent.id
+	3cb76ed9-be31-4878-b78b-728f96cba5b0
+elastic_agent.snapshot
+	false
+elastic_agent.version
+	9.0.8
+event.agent_id_status
+	missing
+event.category
+	network
+event.dataset
+	zeek.ssh
+event.ingested
+	2026-05-03T17:54:02Z
+event.module
+	zeek
+hash.hassh
+	015322ee8471fa8338c558a918183b11
+input.type
+	filestream
+log.file.device_id
+	64512
+log.file.inode
+	152655830
+log.file.path
+	/nsm/zeek/logs/current/ssh.log
+log.id.uid
+	CYlykL28vtiWDufBHg
+log.offset
+	37645
+message
+	{"ts":1777830819.108361,"uid":"CYlykL28vtiWDufBHg","id.orig_h":"10.0.0.99","id.orig_p":37470,"id.resp_h":"10.0.0.20","id.resp_p":22,"version":2,"auth_success":true,"auth_attempts":2,"client":"SSH-2.0-libssh_0.11.3","server":"SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.16","cipher_alg":"chacha20-poly1305@openssh.com","mac_alg":"hmac-sha2-256-etm@openssh.com","compression_alg":"none","kex_alg":"curve25519-sha256","host_key_alg":"ssh-ed25519","host_key":"35:7c:64:99:c0:6d:34:8c:d6:76:fd:da:24:35:60:53","hasshVersion":"1.0","hassh":"015322ee8471fa8338c558a918183b11","hasshServer":"e42184b06d45385a906f0803d04c83da","cshka":"ssh-rsa,ssh-ed25519,ecdsa-sha2-nistp521,ecdsa-sha2-nistp384,ecdsa-sha2-nistp256,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256","hasshAlgorithms":"diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group18-sha512,diffie-hellman-group16-sha512,diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com;chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr;hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256,hmac-sha2-512;none","sshka":"rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ssh-ed25519","hasshServerAlgorithms":"sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256,ext-info-s,kex-strict-s-v00@openssh.com;chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com;umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1;none,zlib@openssh.com"}
+observer.name
+	aom-onion
+pipeline
+	ssh
+server.ip
+	10.0.0.20
+server.port
+	22
+source.ip
+	10.0.0.99
+source.port
+	37470
+ssh.authentication.attempts
+	2
+ssh.authentication.success
+	true
+ssh.cipher_algorithm
+	chacha20-poly1305@openssh.com
+ssh.client
+	SSH-2.0-libssh_0.11.3
+ssh.client_host_key_algorithms
+	ssh-rsa,ssh-ed25519,ecdsa-sha2-nistp521,ecdsa-sha2-nistp384,ecdsa-sha2-nistp256,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256
+ssh.compression_algorithm
+	none
+ssh.hassh_algorithms
+	diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group18-sha512,diffie-hellman-group16-sha512,diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com;chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr;hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256,hmac-sha2-512;none
+ssh.hassh_server
+	e42184b06d45385a906f0803d04c83da
+ssh.hassh_server_algorithms
+	sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256,ext-info-s,kex-strict-s-v00@openssh.com;chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com;umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1;none,zlib@openssh.com
+ssh.hassh_version
+	1.0
+ssh.host_key
+	35:7c:64:99:c0:6d:34:8c:d6:76:fd:da:24:35:60:53
+ssh.host_key_algorithm
+	ssh-ed25519
+ssh.kex_algorithm
+	curve25519-sha256
+ssh.mac_algorithm
+	hmac-sha2-256-etm@openssh.com
+ssh.server
+	SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.16
+ssh.server_host_key_algorithms
+	rsa-sha2-512,rsa-sha2-256,ecdsa-sha2-nistp256,ssh-ed25519
+ssh.version
+	2
+tags
+	[
+  "ssh"
+]
+soc_id
+	wK_57p0BXO5HNJ7gz86P
+soc_score
+	11.26559
+soc_type
+	
+soc_timestamp
+	2026-05-03T17:53:39.108Z
+soc_source
+	aom-onion:.ds-logs-zeek-so-2026.05.03-000001

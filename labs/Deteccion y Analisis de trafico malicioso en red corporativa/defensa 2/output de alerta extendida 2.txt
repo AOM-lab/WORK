@@ -1,0 +1,120 @@
+	2026-05-03 16:33:15.671 +00:00
+	zeek.http
+	10.0.0.99
+	56844
+	10.0.0.20
+	80
+	GET
+	10.0.0.20
+	200
+	OK
+	0
+	10671
+	Cpa2wR2QyhJ7Wszei2
+	1:KpTcLIuxbx4qAyl6BEUpI3kmNYA=
+@timestamp
+	2026-05-03T16:33:15.671Z
+client.ip
+	10.0.0.99
+client.port
+	56844
+container.id
+	http.log
+data_stream.dataset
+	zeek
+data_stream.namespace
+	so
+data_stream.type
+	logs
+destination.ip
+	10.0.0.20
+destination.port
+	80
+ecs.version
+	8.0.0
+elastic_agent.id
+	3cb76ed9-be31-4878-b78b-728f96cba5b0
+elastic_agent.snapshot
+	false
+elastic_agent.version
+	9.0.8
+event.agent_id_status
+	missing
+event.category
+	network
+event.dataset
+	zeek.http
+event.ingested
+	2026-05-03T16:33:19Z
+event.module
+	zeek
+file.resp_mime_types
+	[
+  "text/html"
+]
+http.method
+	GET
+http.request.body.length
+	0
+http.response.body.length
+	10671
+http.status_code
+	200
+http.status_message
+	OK
+http.trans_depth
+	1
+http.uri
+	/
+http.version
+	1.1
+http.virtual_host
+	10.0.0.20
+input.type
+	filestream
+log.file.device_id
+	64512
+log.file.inode
+	152828031
+log.file.path
+	/nsm/zeek/logs/current/http.log
+log.id.resp_fuids
+	[
+  "F9n9iW2oea7UfBOhX5"
+]
+log.id.uid
+	Cpa2wR2QyhJ7Wszei2
+log.offset
+	3051
+message
+	{"ts":1777825995.671145,"uid":"Cpa2wR2QyhJ7Wszei2","id.orig_h":"10.0.0.99","id.orig_p":56844,"id.resp_h":"10.0.0.20","id.resp_p":80,"trans_depth":1,"method":"GET","host":"10.0.0.20","uri":"/","version":"1.1","request_body_len":0,"response_body_len":10671,"status_code":200,"status_msg":"OK","tags":[],"resp_fuids":["F9n9iW2oea7UfBOhX5"],"resp_mime_types":["text/html"]}
+network.community_id
+	1:KpTcLIuxbx4qAyl6BEUpI3kmNYA=
+network.transport
+	tcp
+observer.name
+	aom-onion
+pipeline
+	http
+server.ip
+	10.0.0.20
+server.port
+	80
+source.ip
+	10.0.0.99
+source.port
+	56844
+tags
+	[
+  "http"
+]
+soc_id
+	F66v7p0BXO5HNJ7g6vV-
+soc_score
+	10.702026
+soc_type
+	
+soc_timestamp
+	2026-05-03T16:33:15.671Z
+soc_source
+	aom-onion:.ds-logs-zeek-so-2026.05.03-000001
