@@ -102,7 +102,7 @@ a { color: inherit; text-decoration: none; }
 .toc-progress-bar { width: 100%; height: 0%; background: linear-gradient(180deg, var(--accent), var(--cyan)); transition: height 0.1s; }
 
 /* Article Content */
-.article-content { max-width: 720px; }
+.article-content { max-width: 720px; min-width: 0; }
 .content-section { margin-bottom: 56px; scroll-margin-top: 100px; }
 .content-section h2 { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 24px; display: flex; align-items: center; gap: 16px; }
 .section-number { font-family: var(--font-mono); font-size: 14px; color: var(--accent); font-weight: 600; }
@@ -289,4 +289,71 @@ a { color: inherit; text-decoration: none; }
   .share-section { flex-direction: column; align-items: flex-start; }
   .steps-timeline { padding-left: 32px; }
   .step-marker { left: -32px; width: 24px; height: 24px; font-size: 10px; }
+}
+
+/* ============================================================
+   FIX MÓVIL · evitar desbordamiento horizontal + pulido
+   (añadido para que el artículo se vea bien en móvil,
+    al nivel del index.html)
+   ============================================================ */
+
+/* Red de seguridad global: nada debe superar el ancho de la pantalla */
+html { overflow-x: hidden; }
+body { overflow-x: hidden; }
+
+/* La columna de contenido es un item de grid: debe poder encogerse */
+.article-layout { min-width: 0; }
+.article-content { min-width: 0; }
+
+/* Medios e incrustaciones nunca empujan el ancho */
+.article-content img,
+.img-lab { max-width: 100%; height: auto; }
+
+/* Bloques de código y consultas: scroll interno, nunca rompen la página */
+.code-block,
+.code-block-wrap { max-width: 100%; }
+.code-block pre,
+pre { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.so-query { max-width: 100%; overflow-x: auto; word-break: break-word; }
+
+/* Tablas anchas: se desplazan horizontalmente dentro de su caja */
+.ioc-table,
+.summary-table { display: block; width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Palabras/URLs largas no desbordan los párrafos */
+.content-section p,
+.callout-content,
+.lead { overflow-wrap: anywhere; word-break: break-word; }
+
+/* ---------- Tablet / móvil ---------- */
+@media (max-width: 1024px) {
+  .article-header { max-width: 100%; }
+  .article-content { max-width: 100%; }
+}
+
+@media (max-width: 768px) {
+  /* Navbar compacta y legible al hacer scroll */
+  .navbar { padding: 12px 0; background: rgba(10,10,15,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .nav-container { padding: 0 16px; gap: 14px; }
+  .nav-links { gap: 18px; }
+  .logo-text { font-size: 21px; }
+
+  /* Cabecera del artículo: aire y jerarquía cómodos en móvil */
+  .article-header { padding: 96px 16px 36px; }
+  .article-meta-top { flex-wrap: wrap; gap: 8px; }
+  .subcategory::before { display: none; }
+  .article-excerpt { font-size: 16px; }
+  .article-tags { gap: 6px; }
+
+  /* Tablas en bloque-scroll: que no se "aplaste" el texto */
+  .ioc-table th, .ioc-table td,
+  .summary-table th, .summary-table td { white-space: normal; }
+}
+
+@media (max-width: 480px) {
+  .navbar .nav-item { font-size: 13px; }
+  .nav-social { gap: 12px; }
+  .article-meta-top { flex-direction: column; align-items: flex-start; }
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .vm-row { grid-template-columns: 1fr; }
 }
