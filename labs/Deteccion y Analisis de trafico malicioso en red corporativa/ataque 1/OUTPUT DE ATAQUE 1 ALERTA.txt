@@ -1,0 +1,128 @@
+@timestamp
+	2026-05-03T16:33:07.159Z
+data_stream.dataset
+	suricata
+data_stream.namespace
+	so
+data_stream.type
+	logs
+destination.ip
+	10.0.0.20
+destination.port
+	5432
+ecs.version
+	8.0.0
+elastic_agent.id
+	3cb76ed9-be31-4878-b78b-728f96cba5b0
+elastic_agent.snapshot
+	false
+elastic_agent.version
+	9.0.8
+event.agent_id_status
+	missing
+event.category
+	network
+event.dataset
+	suricata.alert
+event.ingested
+	2026-05-03T16:33:13Z
+event.module
+	suricata
+event.severity
+	2
+event.severity_label
+	medium
+input.type
+	filestream
+log.file.device_id
+	64512
+log.file.inode
+	236275844
+log.file.path
+	/nsm/suricata/eve-2026-05-03-16:32.json
+log.id.uid
+	967383594331666
+log.offset
+	3515
+message
+	{"timestamp":"2026-05-03T16:33:07.159700+0000","flow_id":967383594331666,"in_iface":"bond0","event_type":"alert","src_ip":"10.0.0.99","src_port":48917,"dest_ip":"10.0.0.20","dest_port":5432,"proto":"TCP","ip_v":4,"pkt_src":"wire/pcap","community_id":"1:VNkS4dkQTq5C7PFi7nmOG6PEzDo=","alert":{"action":"allowed","gid":1,"signature_id":2010939,"rev":3,"signature":"ET SCAN Suspicious inbound to PostgreSQL port 5432","category":"Potentially Bad Traffic","severity":2,"metadata":{"confidence":["Medium"],"created_at":["2010_07_30"],"signature_severity":["Informational"],"updated_at":["2019_07_26"]},"rule":"alert tcp $EXTERNAL_NET any -> $HOME_NET 5432 (msg:\"ET SCAN Suspicious inbound to PostgreSQL port 5432\"; flow:to_server; flags:S; threshold: type limit, count 5, seconds 60, track by_src; classtype:bad-unknown; sid:2010939; rev:3; metadata:created_at 2010_07_30, confidence Medium, signature_severity Informational, updated_at 2019_07_26;)"},"direction":"to_server","stream":0,"packet":"CAAnzAY1CAAnJsCcCABFAAAssHYAADgGvd8KAABjCgAAFL8VFTh9v52EAAAAAGACBACQHgAAAgQFtAAA","packet_info":{"linktype":1,"linktype_name":"EN10MB"},"capture_file":"/nsm/suripcap/1/so-pcap.1777825938"}
+network.community_id
+	1:VNkS4dkQTq5C7PFi7nmOG6PEzDo=
+network.packet_source
+	wire/pcap
+network.private_ip
+	[
+  "10.0.0.99",
+  "10.0.0.20"
+]
+network.transport
+	tcp
+observer.ingress.interface.name
+	bond0
+observer.name
+	aom-onion
+related.ip
+	[
+  "10.0.0.99",
+  "10.0.0.20"
+]
+rule.action
+	allowed
+rule.category
+	Potentially Bad Traffic
+rule.gid
+	1
+rule.metadata.confidence
+	[
+  "Medium"
+]
+rule.metadata.created_at
+	[
+  "2010_07_30"
+]
+rule.metadata.signature_severity
+	[
+  "Informational"
+]
+rule.metadata.updated_at
+	[
+  "2019_07_26"
+]
+rule.name
+	ET SCAN Suspicious inbound to PostgreSQL port 5432
+rule.reference
+	https://community.emergingthreats.net
+rule.rev
+	3
+rule.rule
+	alert tcp $EXTERNAL_NET any -> $HOME_NET 5432 (msg:"ET SCAN Suspicious inbound to PostgreSQL port 5432"; flow:to_server; flags:S; threshold: type limit, count 5, seconds 60, track by_src; classtype:bad-unknown; sid:2010939; rev:3; metadata:created_at 2010_07_30, confidence Medium, signature_severity Informational, updated_at 2019_07_26;)
+rule.ruleset
+	Emerging Threats
+rule.severity
+	2
+rule.uuid
+	2010939
+source.ip
+	10.0.0.99
+source.port
+	48917
+suricata.capture_file
+	/nsm/suripcap/1/so-pcap.1777825938
+tags
+	[
+  "alert",
+  "alert"
+]
+soc_id
+	Gq6v7p0BXO5HNJ7g1ISJ
+soc_score
+	0
+soc_type
+	
+soc_timestamp
+	2026-05-03T16:33:07.159Z
+soc_source
+	aom-onion:.ds-logs-suricata.alerts-so-2026.05.03-000001
+
+
+------------------------------------------------------------------------------------------

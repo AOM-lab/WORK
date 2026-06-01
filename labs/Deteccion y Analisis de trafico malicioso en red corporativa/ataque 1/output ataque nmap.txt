@@ -1,0 +1,23 @@
+┌──(kali㉿aom-atacanteRed)-[~]
+└─$ sudo nmap -sS -sV -O -p- 10.0.0.20 -T4 --reason
+sudo: unable to resolve host aom-atacanteRed: Name or service not known
+Starting Nmap 7.98 ( https://nmap.org ) at 2026-05-03 12:33 -0400
+Nmap scan report for 10.0.0.20
+Host is up, received arp-response (0.0024s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE REASON         VERSION
+22/tcp open  ssh     syn-ack ttl 64 OpenSSH 9.6p1 Ubuntu 3ubuntu13.16 (Ubuntu Linux; protocol 2.0)
+80/tcp open  http    syn-ack ttl 64 Apache httpd 2.4.58 ((Ubuntu))
+MAC Address: 08:00:27:CC:06:35 (Oracle VirtualBox virtual NIC)
+Device type: general purpose|router
+Running: Linux 4.X|5.X, MikroTik RouterOS 7.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5 cpe:/o:mikrotik:routeros:7 cpe:/o:linux:linux_kernel:5.6.3
+OS details: Linux 4.15 - 5.19, OpenWrt 21.02 (Linux 5.4), MikroTik RouterOS 7.2 - 7.5 (Linux 5.6.3)
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 10.40 seconds
+                                                                             
+┌──(kali㉿aom-atacanteRed)-[~]
+└─$ 
