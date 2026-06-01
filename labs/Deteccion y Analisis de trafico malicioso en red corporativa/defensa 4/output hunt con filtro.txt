@@ -1,0 +1,122 @@
+2026-05-04 11:13:02.601 +00:00
+	zeek.conn
+	10.0.0.20
+	38274
+	10.0.0.99
+	8080
+	tcp
+	http
+	CuGe3W1o6gypy3Of69
+	1:2qVtg8t5WOLrEK6lcqv0ha6OGkQ=
+@timestamp
+	2026-05-04T11:13:02.601Z
+client.bytes
+	673
+client.ip
+	10.0.0.20
+client.ip_bytes
+	941
+client.oui
+	PCS Systemtechnik GmbH
+client.packets
+	5
+client.port
+	38274
+connection.bytes.missed
+	0
+connection.history
+	ShADadfF
+connection.local.originator
+	true
+connection.local.responder
+	true
+connection.state
+	SF
+connection.state_description
+	Normal SYN/FIN completion
+container.id
+	conn.log
+data_stream.dataset
+	zeek
+data_stream.namespace
+	so
+data_stream.type
+	logs
+destination.ip
+	10.0.0.99
+destination.port
+	8080
+ecs.version
+	8.0.0
+elastic_agent.id
+	3cb76ed9-be31-4878-b78b-728f96cba5b0
+elastic_agent.snapshot
+	false
+elastic_agent.version
+	9.0.8
+event.agent_id_status
+	missing
+event.category
+	network
+event.dataset
+	zeek.conn
+event.duration
+	0.0006949901580810547
+event.ingested
+	2026-05-04T11:13:16Z
+event.module
+	zeek
+input.type
+	filestream
+log.file.device_id
+	64512
+log.file.inode
+	152846844
+log.file.path
+	/nsm/zeek/logs/current/conn.log
+log.id.uid
+	CuGe3W1o6gypy3Of69
+log.offset
+	6980
+message
+	{"ts":1777893182.601087,"uid":"CuGe3W1o6gypy3Of69","id.orig_h":"10.0.0.20","id.orig_p":38274,"id.resp_h":"10.0.0.99","id.resp_p":8080,"proto":"tcp","service":"http","duration":0.0006949901580810547,"orig_bytes":673,"resp_bytes":95,"conn_state":"SF","local_orig":true,"local_resp":true,"missed_bytes":0,"history":"ShADadfF","orig_pkts":5,"orig_ip_bytes":941,"resp_pkts":5,"resp_ip_bytes":363,"ip_proto":6,"community_id":"1:2qVtg8t5WOLrEK6lcqv0ha6OGkQ=","orig_mac_oui":"PCS Systemtechnik GmbH"}
+network.bytes
+	768
+network.community_id
+	1:2qVtg8t5WOLrEK6lcqv0ha6OGkQ=
+network.protocol
+	http
+network.transport
+	tcp
+observer.name
+	aom-onion
+pipeline
+	conn
+server.bytes
+	95
+server.ip
+	10.0.0.99
+server.ip_bytes
+	363
+server.packets
+	5
+server.port
+	8080
+source.ip
+	10.0.0.20
+source.port
+	38274
+tags
+	[
+  "conn"
+]
+soc_id
+	XbOx8p0BXO5HNJ7gQWCI
+soc_score
+	10.466447
+soc_type
+	
+soc_timestamp
+	2026-05-04T11:13:02.601Z
+soc_source
+	aom-onion:.ds-logs-zeek-so-2026.05.03-000001
