@@ -1,0 +1,8 @@
+                                                                                  
+┌──(kali㉿aom-atacanteRed)-[~]
+└─$ scp /tmp/aom_malware1.sh aom-trabajador1@10.0.0.20:/tmp/aom_malware1.sh
+aom-trabajador1@10.0.0.20's password: 
+aom_malware1.sh                                 100%  367     1.2MB/s   00:00    
+                                                                                  
+┌──(kali㉿aom-atacanteRed)-[~]
+└─$ 

