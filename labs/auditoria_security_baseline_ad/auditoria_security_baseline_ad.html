@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Security Baseline y Auditoría Técnica sobre Active Directory: bastionado y validación antes/después | Alejandro Orcajada</title>
+  <meta name="description" content="Puesta en producción segura y auditoría técnica de configuración y vulnerabilidades sobre una infraestructura Windows Server 2022 (pfSense, AD, SQL, endpoints y Wazuh). NIST SP 800-115, con CIS Benchmarks y ENS como referencia. Resultado: Nessus de 70 críticas / 194 altas a 0/0 y PingCastle de 55 a 30."/>
+  <meta name="author" content="Alejandro Orcajada"/>
+  <meta name="theme-color" content="#0a0a0f"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="articulo.css"/>
+</head>
+<body>
+
+<div id="lb-overlay" role="dialog" aria-modal="true">
+  <button id="lb-close">&#x2715;</button>
+  <button class="lb-arrow" id="lb-prev">&#8592;</button>
+  <div id="lb-img-wrap"><img id="lb-img" src="" alt=""></div>
+  <p id="lb-caption"></p>
+  <button class="lb-arrow" id="lb-next">&#8594;</button>
+  <span id="lb-hint">ESC · ← → para navegar</span>
+</div>
+
+<div class="noise"></div>
+<div class="grid-bg"></div>
+<div class="spotlight" id="spotlight"></div>
+<div class="reading-progress" id="reading-progress"></div>
+
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="index.html" class="nav-logo"><span class="logo-text">AO</span><span class="logo-dot"></span></a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-item">Inicio</a>
+      <a href="blog.html" class="nav-item">Blog</a>
+    </div>
+    <div class="nav-social">
+      <a href="https://github.com/tuusuario" target="_blank" rel="noopener"><i class="fab fa-github"></i></a>
+      <a href="https://linkedin.com/in/tuusuario" target="_blank" rel="noopener"><i class="fab fa-linkedin-in"></i></a>
+    </div>
+    <button class="toc-toggle" id="toc-toggle" aria-label="Abrir contenido" aria-expanded="false" aria-controls="toc-menu">
+      <i class="fas fa-list-ul"></i><span>Contenido</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Menú "Contenido" a pantalla completa (solo móvil) -->
+<div class="toc-menu" id="toc-menu" role="dialog" aria-modal="true" aria-label="Contenido del artículo">
+  <button class="toc-menu-close" id="toc-menu-close" aria-label="Cerrar contenido">&#x2715;</button>
+  <span class="toc-menu-label">Contenido</span>
+  <nav class="toc-menu-nav">
+    <a href="#intro"><span class="toc-menu-num">01</span><span>Introducción</span></a>
+    <a href="#tipos"><span class="toc-menu-num">02</span><span>Tipos de auditoría</span></a>
+    <a href="#herramientas"><span class="toc-menu-num">03</span><span>Herramientas</span></a>
+    <a href="#marcos"><span class="toc-menu-num">04</span><span>Marcos normativos</span></a>
+    <a href="#escenario"><span class="toc-menu-num">05</span><span>Escenario e infraestructura</span></a>
+    <a href="#baseline"><span class="toc-menu-num">06</span><span>Security Baseline</span></a>
+    <a href="#inicial"><span class="toc-menu-num">07</span><span>Estado inicial</span></a>
+    <a href="#hallazgos"><span class="toc-menu-num">08</span><span>Matriz de hallazgos</span></a>
+    <a href="#hardening"><span class="toc-menu-num">09</span><span>Hardening</span></a>
+    <a href="#final"><span class="toc-menu-num">10</span><span>Estado final</span></a>
+    <a href="#evidencias"><span class="toc-menu-num">11</span><span>Anexo de evidencias</span></a>
+    <a href="#conclusion"><span class="toc-menu-num">12</span><span>Conclusión</span></a>
+    <a href="#biblio"><span class="toc-menu-num">13</span><span>Bibliografía</span></a>
+  </nav>
+</div>
+
+<header class="article-header">
+  <a href="blog.html" class="back-link"><i class="fas fa-arrow-left"></i><span>Volver al blog</span></a>
+  <div class="article-meta-top">
+    <span class="category-badge">Auditoría · Bastionado · Blue Team</span>
+    <span class="subcategory">Active Directory · pfSense · Nessus · PingCastle · BloodHound · Wazuh</span>
+  </div>
+  <h1 class="article-title">Security Baseline y Auditoría Técnica sobre Active Directory: bastionado y validación antes/después</h1>
+  <p class="article-excerpt">
+    Ciclo completo de puesta en producción segura y auditoría técnica de una infraestructura Windows Server 2022 montada
+    en VirtualBox: pfSense con tres redes segmentadas, dos controladores de dominio, SQL Server, estaciones de trabajo,
+    una estación de administración y un SIEM Wazuh. Bastionamos, auditamos la configuración y las vulnerabilidades con
+    herramientas estándar de la industria y medimos el resultado antes y después. Metodología <strong>NIST SP 800-115</strong>,
+    con <strong>CIS Benchmarks</strong> y <strong>ENS</strong> como marcos de referencia.
+  </p>
+  <div class="article-info">
+    <div class="author-info">
+      <div class="author-avatar">AO</div>
+      <div class="author-details">
+        <span class="author-name">Alejandro Orcajada</span>
+        <span class="author-role">Ciberseguridad · Auditoría · Blue Team</span>
+      </div>
+    </div>
+    <div class="article-stats">
+      <span class="stat"><i class="fas fa-calendar"></i> May 2026</span>
+      <span class="stat"><i class="fas fa-clock"></i> 50 min lectura</span>
+      <span class="stat"><i class="fas fa-shield-alt"></i> Lab ejecutado</span>
+    </div>
+  </div>
+  <div class="article-tags">
+    <span class="tag">Windows Server 2022</span><span class="tag">Active Directory</span><span class="tag">pfSense</span>
+    <span class="tag">Nessus</span><span class="tag">PingCastle</span><span class="tag">BloodHound</span>
+    <span class="tag">Purple Knight</span><span class="tag">Wazuh</span><span class="tag">CIS Benchmarks</span>
+    <span class="tag">NIST 800-115</span><span class="tag">ENS</span>
+  </div>
+</header>
+
+<main class="article-layout">
+
+  <aside class="toc-sidebar">
+    <div class="toc-container">
+      <h4 class="toc-title"><i class="fas fa-list"></i>Contenido</h4>
+      <nav class="toc-nav">
+        <a href="#intro" class="toc-link active">Introducción</a>
+        <a href="#tipos" class="toc-link">Tipos de auditoría</a>
+        <a href="#herramientas" class="toc-link">Herramientas</a>
+        <a href="#marcos" class="toc-link">Marcos normativos</a>
+        <a href="#escenario" class="toc-link">Escenario e infraestructura</a>
+        <a href="#baseline" class="toc-link">Security Baseline</a>
+        <a href="#inicial" class="toc-link">Estado inicial</a>
+        <a href="#hallazgos" class="toc-link">Matriz de hallazgos</a>
+        <a href="#hardening" class="toc-link">Hardening</a>
+        <a href="#final" class="toc-link">Estado final</a>
+        <a href="#evidencias" class="toc-link">Anexo de evidencias</a>
+        <a href="#conclusion" class="toc-link">Conclusión</a>
+        <a href="#biblio" class="toc-link">Bibliografía</a>
+      </nav>
+    </div>
+  </aside>
+
+  <article class="article-content">
+
+<style>
+  .ev-download{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;background:var(--bg-card,#16161f);border:1px solid var(--border);border-left:3px solid var(--accent,#00ffaa);border-radius:var(--radius-md,12px);padding:14px 18px;margin:1.1rem 0;}
+  .ev-download .ev-meta{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .ev-download .ev-meta strong{color:var(--text-primary);font-size:.92rem;}
+  .ev-download .ev-meta span{color:var(--text-muted);font-size:.72rem;font-family:var(--font-mono);}
+  .ev-download .ev-meta i{color:var(--accent,#00ffaa);margin-right:7px;}
+  .ev-btns{display:flex;flex-wrap:wrap;gap:8px;}
+  a.ev-btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.78rem;font-weight:500;padding:8px 14px;border-radius:8px;background:rgba(0,255,170,.13);border:1px solid rgba(0,255,170,.3);color:var(--accent,#00ffaa);text-decoration:none;transition:.2s;white-space:nowrap;}
+  a.ev-btn:hover{background:rgba(0,255,170,.22);transform:translateY(-1px);}
+  a.ev-btn.alt{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:var(--cyan,#00d4ff);}
+</style>
+
+<!-- INTRO -->
+    <section id="intro" class="content-section">
+      <h2><span class="section-number">01</span> Introducción</h2>
+      <p class="lead">¡Buenas! En esta entrada recorremos el ciclo completo de <strong>puesta en producción segura</strong> y <strong>auditoría técnica</strong> de una infraestructura corporativa Windows Server real: desde que se despliega, pasando por su bastionado, hasta auditar su configuración y vulnerabilidades, remediar los hallazgos y volver a medir para demostrar la mejora con datos.</p>
+      <p>Te aviso: es la entrada más larga y compleja del blog. Si vienes de procesos más acotados, empieza por <em>"Análisis y triaje de alertas críticas en Windows Server AD"</em> y <em>"Análisis de tráfico malicioso en red corporativa"</em>, que son más cerrados. Si ya las tienes claras, adelante.</p>
+      <div class="callout callout-info"><div class="callout-icon"><i class="fas fa-info-circle"></i></div><div class="callout-content"><strong>Alcance honesto de esta entrada</strong><p>Cubre dos cosas: una <strong>Security Baseline</strong> (puesta en producción segura) y una <strong>auditoría técnica de configuración y vulnerabilidades</strong> con plan de remediación y validación antes/después.</p>
+
+<p>La <strong>explotación activa (pentest)</strong> queda fuera — la dejamos como alcance futuro. Es un <strong>entorno simulado</strong>: NIST SP 800-115, CIS Benchmarks, ENS e ISO 27001 se usan como <strong>marcos de referencia</strong>, no como certificación.</p></div></div>
+    </section>
+
+<!-- TIPOS -->
+    <section id="tipos" class="content-section">
+      <h2><span class="section-number">02</span> Tipos de auditoría</h2>
+      <p>Según el objetivo y el alcance, auditar toma una forma distinta. Tres tipos principales:</p>
+      <h3>Security Audit — Auditoría de seguridad</h3>
+      <p>Verifica que un sistema cumple una normativa o estándar. No explota nada, comprueba si se siguen las reglas. El resultado es un <strong>dictamen de cumplimiento</strong>.</p>
+      <h3>Vulnerability Assessment — Evaluación de vulnerabilidades</h3>
+      <p>Identifica y cataloga todas las debilidades con herramientas de escaneo. No se explota, se detecta y se prioriza: <em>¿qué fallos hay y cuán graves son?</em></p>
+      <h3>Penetration Test — Prueba de intrusión</h3>
+      <p>Se simula un atacante real y se explotan las vulnerabilidades para confirmar impacto. El pentest <strong>confirma</strong>, no solo sugiere.</p>
+      <div class="callout callout-info"><div class="callout-icon"><i class="fas fa-crosshairs"></i></div><div class="callout-content"><strong>¿Qué hacemos aquí?</strong><p>Una <strong>puesta en producción segura</strong> seguida de <strong>auditoría de configuración (contra CIS) y evaluación de vulnerabilidades (Nessus)</strong>, con matriz de hallazgos, remediación y validación antes/después. Los dos primeros tipos, sin pentest.</p></div></div>
+    </section>
+
+<!-- HERRAMIENTAS -->
+    <section id="herramientas" class="content-section">
+      <h2><span class="section-number">03</span> Herramientas empleadas</h2>
+      <p>En una auditoría real las herramientas deben ser reconocidas y verificadas, porque sus resultados respaldan un informe con validez técnica.</p>
+      <div class="summary-table" style="overflow-x:auto"><table class="summary-table"><thead><tr><th>Herramienta</th><th>Tipo</th><th>Rol</th></tr></thead><tbody>
+        <tr><td>Nessus (Tenable)</td><td>Comercial</td><td>Escaneo de vulnerabilidades y CVEs por máquina</td></tr>
+        <tr><td>PingCastle</td><td>Open source</td><td>Risk scoring del dominio AD</td></tr>
+        <tr><td>Purple Knight</td><td>Gratuita (Semperis)</td><td>Indicadores de exposición de AD</td></tr>
+        <tr><td>BloodHound + SharpHound</td><td>Open source</td><td>Rutas de ataque y relaciones del directorio</td></tr>
+        <tr><td>Nmap</td><td>Open source</td><td>Reconocimiento de puertos y servicios</td></tr>
+        <tr><td>Wazuh</td><td>Open source</td><td>SIEM/XDR: monitorización y validación</td></tr>
+      </tbody></table></div>
+      <div class="callout callout-info"><div class="callout-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="callout-content"><strong>La zona gris del código abierto</strong><p>Que algo sea open source y esté en GitHub no lo valida. Regla práctica: comunidad activa, mantenimiento reciente y presencia en repositorios oficiales de distros de seguridad. Un criterio directo es <code>kali.org/tools</code>, curado por Offensive Security.</p></div></div>
+    </section>
+
+<!-- MARCOS -->
+    <section id="marcos" class="content-section">
+      <h2><span class="section-number">04</span> Marcos normativos</h2>
+      <p>Una auditoría sin marco no es auditoría, es un escaneo. El marco define qué comprobar, cómo y con qué validez.</p>
+      <div class="summary-table" style="overflow-x:auto"><table class="summary-table"><thead><tr><th>Marco</th><th>Para qué</th></tr></thead><tbody>
+        <tr><td>NIST SP 800-115</td><td>Metodología técnica: planificación, descubrimiento, ejecución y post-ejecución. El "cómo".</td></tr>
+        <tr><td>ENS — RD 311/2022</td><td>Marco legal español de referencia (categoría Media). Aquí es referencia, no certificación.</td></tr>
+        <tr><td>CIS Benchmarks</td><td>Configuración segura concreta de Windows Server 2022, Windows y SQL Server.</td></tr>
+        <tr><td>ISO/IEC 27001</td><td>Referencia para la gestión del riesgo y la estructura del informe.</td></tr>
+      </tbody></table></div>
+      <div class="callout callout-danger"><div class="callout-icon"><i class="fas fa-gavel"></i></div><div class="callout-content"><strong>Lo que sí y lo que no se puede afirmar</strong><p>Se puede decir <em>"basado en / alineado con"</em>. <strong>No</strong> se puede decir <em>"certificado ENS"</em> ni <em>"auditoría oficial ENS"</em>: la certificación la emite un organismo acreditado, y este es un entorno simulado.</p></div></div>
+    </section>
+
+<!-- ESCENARIO -->
+    <section id="escenario" class="content-section grp-prep">
+      <h2><span class="section-number">05</span> Escenario e infraestructura</h2>
+      <p>Todo está montado en VirtualBox sobre un <strong>pfSense con tres redes internas segmentadas</strong>, simulando una pyme de ~20 usuarios con dos servidores. Dominio: <code>AOM-AUDITORIA.lab</code>.</p>
+      <img src="img/pfsense-panel.png" alt="Panel de consola de pfSense recién instalado" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Panel de consola de pfSense recién instalado</p>
+      <img src="img/pfsense-interfaces.png" alt="Asignación de las interfaces de red en pfSense" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Asignación de las interfaces de red en pfSense</p>
+      <img src="img/pfsense-adaptadores.png" alt="Adaptadores de red de pfSense configurados en VirtualBox" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Adaptadores de red de pfSense configurados en VirtualBox</p>
+
+      <p>pfSense es la primera máquina: sin él, al estar cada segmento en una red distinta, las máquinas no se comunicarían. Le damos cuatro interfaces — WAN y tres LAN: <code>LAN-SERVIDORES</code> (10.10.1.0/24), <code>LAN-TRABAJADORES</code> (10.10.2.0/24) y <code>LAN-GESTION-ADM</code> (10.10.3.0/24).</p>
+      <div class="vm-row">
+        <div class="vm-card"><span class="vm-label">Firewall</span><h4>pfSense 2.7.2</h4><p>WAN + 3 LAN<br>Segmentación por zonas<br>Logs &#8594; Wazuh</p></div>
+        <div class="vm-card"><span class="vm-label">Controlador de dominio</span><h4>DC01 — Win Server 2022</h4><p>10.10.1.10<br>AD DS · DNS · DHCP<br>Agente Wazuh</p></div>
+        <div class="vm-card"><span class="vm-label">DC secundario + SQL</span><h4>DC02 — Win Server 2022</h4><p>10.10.1.20<br>AD DS (réplica) · SQL Server 2022<br>3 BBDD de negocio</p></div>
+        <div class="vm-card"><span class="vm-label">Estaciones de trabajo</span><h4>PC-VENTAS / RRHH / ALMACEN</h4><p>10.10.2.3 / .6 / .9<br>Windows 10 Pro · unidos al dominio<br>Agente Wazuh</p></div>
+        <div class="vm-card"><span class="vm-label">Estación de administración</span><h4>PC-ADMIN</h4><p>10.10.3.2<br>Windows 10 Pro<br>Desde aquí se audita</p></div>
+        <div class="vm-card"><span class="vm-label">SIEM — Blue Team</span><h4>Wazuh 4.14.2</h4><p>10.10.3.10<br>SIEM + XDR<br>6 agentes activos</p></div>
+      </div>
+      <h3>Active Directory y datos de negocio</h3>
+      <img src="img/dc01-dominio.png" alt="Promoción de DC01 a controlador de dominio" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Promoción de DC01 a controlador de dominio</p>
+      <img src="img/dc01-ous.png" alt="Estructura de unidades organizativas en Active Directory" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Estructura de unidades organizativas en Active Directory</p>
+
+      <p>DC01 se promociona como controlador principal del bosque <code>AOM-AUDITORIA.lab</code> con DNS y DHCP, y ordenamos el dominio en OUs por función: <code>Trabajadores</code> (Ventas, RRHH, Almacén), <code>Administracion</code> y <code>Servidores</code>.</p>
+      <img src="img/dc01-grupos.png" alt="Grupos de seguridad del dominio" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Grupos de seguridad del dominio</p>
+      <img src="img/dc01-usuarios.png" alt="Usuarios del dominio dados de alta" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Usuarios del dominio dados de alta</p>
+      <img src="img/dc01-pcs-unidos.png" alt="Equipos unidos al dominio" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Equipos unidos al dominio</p>
+
+      <p>Damos de alta usuarios por departamento y sus grupos (<code>GRP-Ventas</code>, <code>GRP-RRHH</code>, <code>GRP-Almacen</code>, <code>GRP-Admins</code>), más dos cuentas de servicio: <code>svc_sql</code> y <code>svc_backup</code> — protagonistas de los hallazgos. Después unimos cada equipo al dominio.</p>
+      <img src="img/dc02-sql.png" alt="Instalación de SQL Server 2022 en DC02" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Instalación de SQL Server 2022 en DC02</p>
+      <img src="img/dc02-bbdd.png" alt="Creación de las bases de datos de negocio" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Creación de las bases de datos de negocio</p>
+
+      <p>En DC02 instalamos SQL Server 2022 con tres bases de datos de negocio — <code>DB_Ventas</code>, <code>DB_RRHH</code>, <code>DB_Almacen</code> — con datos de ejemplo (clientes, nóminas, empleados, proveedores). Cada grupo accede solo a su BBDD.</p>
+      <img src="img/dc02-probar-bbdd.png" alt="Comprobación de las bases de datos" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Comprobación de las bases de datos</p>
+      <img src="img/dc02-resumen.png" alt="Resumen del servidor DC02" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Resumen del servidor DC02</p>
+
+      <p>Comprobamos las consultas y dejamos el inventario de DC02 documentado.</p>
+      <h3>Reglas de firewall — mínimo acceso</h3>
+      <img src="img/pfsense-reglas.png" alt="Reglas de firewall para la LAN de trabajadores" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Reglas de firewall para la LAN de trabajadores</p>
+      <img src="img/pfsense-reglas-admins.png" alt="Reglas de firewall para la LAN de administración" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Reglas de firewall para la LAN de administración</p>
+
+      <p>La red de trabajadores solo llega a lo necesario; el resto se bloquea con una regla final de denegación — <em>zero trust</em> aplicado a segmentos.</p>
+      <div class="summary-table" style="overflow-x:auto"><table class="summary-table"><thead><tr><th>Origen</th><th>Servicio</th><th>Destino</th></tr></thead><tbody>
+        <tr><td>LAN-TRABAJADORES</td><td>Kerberos 88 · LDAP 389 · SMB 445 · DNS 53</td><td>DC01 (10.10.1.10)</td></tr>
+        <tr><td>LAN-TRABAJADORES</td><td>SQL 1433</td><td>DC02 (10.10.1.20)</td></tr>
+        <tr><td>LAN-TRABAJADORES</td><td>Agente Wazuh 1514-1516</td><td>Wazuh (10.10.3.10)</td></tr>
+        <tr><td>LAN-TRABAJADORES</td><td>Bloquear todo lo demás</td><td>any</td></tr>
+        <tr><td>LAN-GESTION-ADM</td><td>Administración + WebGUI 443</td><td>any / pfSense</td></tr>
+      </tbody></table></div>
+      <img src="img/pfsense-log-wazuh.png" alt="Envío de logs de pfSense a Wazuh" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Envío de logs de pfSense a Wazuh</p>
+
+      <p>pfSense envía sus logs a Wazuh, de modo que el SIEM tiene visibilidad también de la capa de red.</p>
+      <img src="img/wazuh-desplegar.png" alt="Despliegue de los agentes Wazuh" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Despliegue de los agentes Wazuh</p>
+      <img src="img/wazuh-agentes.png" alt="Panel de agentes de Wazuh con los seis equipos" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Panel de agentes de Wazuh con los seis equipos</p>
+      <img src="img/wazuh-prueba.png" alt="Wazuh recogiendo una prueba de los administradores" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Wazuh recogiendo una prueba de los administradores</p>
+
+      <p>Desplegamos los seis agentes (los dos DC, las tres estaciones y la de administración), comprobamos que reportan y lanzamos una prueba que Wazuh recoge sin problema. El escenario está listo.</p>
+    </section>
+
+<!-- BASELINE -->
+    <section id="baseline" class="content-section grp-prep">
+      <h2><span class="section-number">06</span> Security Baseline — puesta en producción segura</h2>
+      <p>Antes de auditar aplicamos la <strong>línea base de seguridad</strong>: las medidas imprescindibles para entrar en producción. Orden: DC01 &#8594; DC02/SQL &#8594; estaciones &#8594; PC-ADMIN &#8594; pfSense &#8594; Wazuh.</p>
+      <h3>DC01 — política de dominio y GPOs base</h3>
+      <img src="img/baseline-gpo-dominio.png" alt="GPO de seguridad base del dominio" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">GPO de seguridad base del dominio</p>
+      <img src="img/baseline-crear-gpo.png" alt="Creación manual de una GPO" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Creación manual de una GPO</p>
+
+      <p>Aplicamos por GPO la política de contraseñas fuerte y las directivas de seguridad del dominio: deshabilitar <strong>SMBv1</strong>, forzar <strong>NTLMv2</strong> (sin LM), deshabilitar <strong>LLMNR</strong>, exigir <strong>firma SMB</strong> y cortar la enumeración anónima de SAM.</p>
+      <img src="img/baseline-auditoria-avanzada.png" alt="Configuración de auditoría avanzada por GPO" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Configuración de auditoría avanzada por GPO</p>
+
+      <p>Activamos la <strong>auditoría avanzada</strong> (Event ID 4624, 4768, 4769…) para registrar logons y peticiones Kerberos — es lo que da visibilidad de un futuro Kerberoasting o fuerza bruta.</p>
+      <img src="img/baseline-gpo-admins.png" alt="GPO específica para administradores" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">GPO específica para administradores</p>
+      <img src="img/baseline-rdp-admins.png" alt="GPO de RDP restringido a administradores" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">GPO de RDP restringido a administradores</p>
+
+      <p>Una GPO específica restringe el <strong>RDP a administradores</strong> y endurece la estación de gestión, limitando el movimiento lateral por escritorio remoto.</p>
+      <img src="img/baseline-sysmon.png" alt="Despliegue de Sysmon en DC01" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Despliegue de Sysmon en DC01</p>
+
+      <p>Desplegamos <strong>Sysmon</strong> con configuración base en los servidores, que aporta a Wazuh telemetría profunda de procesos y conexiones.</p>
+      <h3>Estaciones de trabajo</h3>
+      <img src="img/baseline-gpo-trabajadores.png" alt="GPO de restricciones para estaciones de trabajo" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">GPO de restricciones para estaciones de trabajo</p>
+      <img src="img/baseline-gpo-trabajadores-2.png" alt="GPO adicional para estaciones de trabajo" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">GPO adicional para estaciones de trabajo</p>
+      <img src="img/baseline-gpupdate.png" alt="Aplicación forzada de GPOs con gpupdate" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Aplicación forzada de GPOs con gpupdate</p>
+
+      <p>A los puestos por OU les aplicamos GPOs de restricción (sin CMD ni Panel de control para usuarios raso), firewall local y Sysmon, y forzamos su aplicación con <code>gpupdate</code>.</p>
+      <img src="img/baseline-pfsense-final.png" alt="Estado final de las reglas de pfSense" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Estado final de las reglas de pfSense</p>
+
+      <p>Revisamos y completamos las reglas de pfSense, dejando la segmentación cerrada.</p>
+      <h3>Validación en Wazuh</h3>
+      <img src="img/baseline-wazuh-pilla.png" alt="Wazuh detectando la prueba lanzada" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Wazuh detectando la prueba lanzada</p>
+      <img src="img/baseline-wazuh-prueba.png" alt="Prueba de los administradores reflejada en Wazuh" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Prueba de los administradores reflejada en Wazuh</p>
+
+      <p>Hacemos pruebas por grupo y comprobamos que <strong>Wazuh las recoge</strong>. Dejamos cargadas reglas de detección de Kerberoasting, fuerza bruta, cambios en grupos privilegiados y AS-REP Roasting.</p>
+      <div class="callout callout-info"><div class="callout-icon"><i class="fas fa-circle-info"></i></div><div class="callout-content"><strong>Algunas medidas no son viables en este laboratorio</strong><p>Quedan documentadas como recomendación pero no se aplican en VirtualBox: <strong>LAPS</strong> completo, <strong>Credential Guard</strong>, <strong>BitLocker</strong>, <strong>AppLocker/WDAC</strong> y un <strong>modelo de tiering</strong>. En la matriz se reflejan como hallazgo abierto con su justificación.</p></div></div>
+    </section>
+
+<!-- INICIAL -->
+    <section id="inicial" class="content-section grp-soc">
+      <h2><span class="section-number">07</span> Estado inicial — análisis (gap analysis)</h2>
+      <p>Con la línea base aplicada, sacamos la "foto" del estado real desde <code>PC-ADMIN</code> con las herramientas, para ver el riesgo residual antes de remediar.</p>
+      <img src="img/inicial-herramientas.png" alt="Herramientas de auditoría descargadas en PC-ADMIN" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Herramientas de auditoría descargadas en PC-ADMIN</p>
+
+      <p>Descargamos y preparamos todo el arsenal de auditoría en la estación de administración.</p>
+      <img src="img/inicial-nmap-panel.png" alt="Panel de Nmap durante el escaneo" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Panel de Nmap durante el escaneo</p>
+      <img src="img/inicial-nmap-resultados.png" alt="Resultados del escaneo Nmap de las tres redes" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Resultados del escaneo Nmap de las tres redes</p>
+
+      <p>Con <strong>Nmap</strong> mapeamos qué puertos y servicios están expuestos en cada IP de las tres redes — el punto de partida del descubrimiento.</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">Nmap — comando ejecutado por host (estado inicial)</span></div><pre><code>nmap -sV -sC -O -p- --open -A &lt;IP&gt;
+# Salida completa por host (DC01, DC02, PC-VENTAS/RRHH/ALMACEN, PC-ADMIN, Wazuh)
+# en el Anexo de evidencias -&gt; evidencias/completo/03_estado_inicial/nmap/</code></pre></div>
+      <img src="img/inicial-nessus-panel.png" alt="Panel de Nessus con el escaneo de vulnerabilidades" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Panel de Nessus con el escaneo de vulnerabilidades</p>
+      <img src="img/inicial-nessus-escaneo.png" alt="Escaneo de Nessus en ejecución" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Escaneo de Nessus en ejecución</p>
+
+      <p><strong>Nessus</strong> escanea cada máquina en busca de CVEs y parches faltantes. El estado inicial es duro: <strong>70 vulnerabilidades críticas y 194 altas</strong> en el conjunto, en su mayoría parches de sistema y servicio sin aplicar.</p>
+      <div class="ev-download">
+        <div class="ev-meta"><strong><i class="fas fa-shield-halved"></i>PingCastle — informe completo (estado inicial)</strong><span>HTML · risk score y 170 indicadores de identidad</span></div>
+        <div class="ev-btns"><a class="ev-btn" href="evidencias/pingcastle_inicial.html" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> Abrir informe</a></div>
+      </div>
+      <div class="ev-download">
+        <div class="ev-meta"><strong><i class="fas fa-file-code"></i>Nessus — export del escaneo inicial</strong><span>JSON · 70 críticas · 194 altas</span></div>
+        <div class="ev-btns"><a class="ev-btn alt" href="evidencias/nessus_inicial.json" download><i class="fas fa-download"></i> Descargar JSON</a></div>
+      </div>
+      <img src="img/inicial-pk-asistente.png" alt="Asistente de instalación de Purple Knight" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Asistente de instalación de Purple Knight</p>
+      <img src="img/inicial-pk-resultados.png" alt="Resultados de Purple Knight sobre el dominio" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Resultados de Purple Knight sobre el dominio</p>
+
+      <p><strong>Purple Knight</strong> evalúa indicadores de exposición específicos de Active Directory, complementando a PingCastle en la parte de identidad.</p>
+      <img src="img/inicial-bh-importar.png" alt="Importación de los datos de SharpHound en BloodHound" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Importación de los datos de SharpHound en BloodHound</p>
+      <img src="img/inicial-bh-path.png" alt="Análisis de rutas de ataque en BloodHound" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Análisis de rutas de ataque en BloodHound</p>
+      <img src="img/inicial-bh-resultados.png" alt="Grafo de relaciones del dominio en BloodHound" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Grafo de relaciones del dominio en BloodHound</p>
+
+      <p>Con <strong>BloodHound</strong> (datos de SharpHound) visualizamos relaciones y rutas hacia objetivos de alto valor. El panel de análisis da directamente las consultas clave: cuentas Kerberoastable, AS-REP Roastable y caminos más cortos a Domain Admins.</p>
+      <img src="img/inicial-revision-manual.png" alt="Ejecución de los scripts de revisión manual" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Ejecución de los scripts de revisión manual</p>
+      <img src="img/inicial-revision-dc2.png" alt="Resultados de la revisión manual en DC02" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Resultados de la revisión manual en DC02</p>
+
+      <p>Las herramientas no lo ven todo. Pasamos una <strong>revisión manual de más de 40 comprobaciones</strong> sobre AD, SQL, red y endpoints. Un extracto de los hallazgos:</p>
+      <div class="code-block"><div class="code-header"><span class="code-lang">Revisión manual — extracto de hallazgos</span></div><pre><code>06_kerberoastable_spn   -> cuentas de servicio con SPN activo (Kerberoasting)
+05_asrep_roastable      -> cuentas sin preautenticacion Kerberos (AS-REP)
+36_smbv1_status         -> SMBv1 Status: Disabled
+40_wdigest_status       -> WDigest UseLogonCredential (0=seguro, 1=peligroso)
+41_laps_status          -> LAPS no instalado/configurado
+26_sysvol_cpassword_GPP -> busqueda de contrasenas en SYSVOL
+35_admin_locales        -> administradores locales por equipo
+gpresult /r (cada PC)   -> verificacion de GPOs realmente aplicadas</code></pre></div>
+      <div class="ev-download">
+        <div class="ev-meta"><strong><i class="fas fa-list-check"></i>gpresult — GPOs realmente aplicadas</strong><span>HTML · verificación en DC01 y DC02</span></div>
+        <div class="ev-btns"><a class="ev-btn" href="evidencias/gpresult_dc01.html" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> DC01</a><a class="ev-btn" href="evidencias/gpresult_dc02.html" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> DC02</a></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-card"><span class="stat-val red">55</span><span class="stat-label">PingCastle (riesgo)</span></div>
+        <div class="stat-card"><span class="stat-val red">70</span><span class="stat-label">Nessus · críticas</span></div>
+        <div class="stat-card"><span class="stat-val red">194</span><span class="stat-label">Nessus · altas</span></div>
+      </div>
+    </section>
+
+<!-- HALLAZGOS -->
+    <section id="hallazgos" class="content-section grp-soc">
+      <h2><span class="section-number">08</span> Matriz de hallazgos</h2>
+      <p>Lo que diferencia a un auditor de quien solo pasa herramientas es <strong>correlacionar</strong> los datos en hallazgos con impacto de negocio. Clasificamos por las dimensiones del ENS — Disponibilidad, Integridad, Confidencialidad, Autenticidad y Trazabilidad (<strong>DICAT</strong>).</p>
+      <div class="corr-box"><h4><i class="fas fa-project-diagram" style="margin-right:6px"></i>Ejemplo de correlación — impacto real, no dato suelto</h4><p><code>svc_sql</code> tiene contraseña que no caduca <strong>+</strong> es <code>db_owner</code> en las tres BBDD <strong>+</strong> esas BBDD contienen DNIs, nóminas y datos de clientes. Quien comprometa esa cuenta tiene acceso total a datos personales y económicos. <strong>Impacto: crítico. RGPD aplicable.</strong></p></div>
+      <div class="summary-table" style="overflow-x:auto"><table class="summary-table"><thead><tr><th>ID</th><th>Hallazgo</th><th>DICAT</th><th>Riesgo</th><th>Estado</th></tr></thead><tbody>
+        <tr><td>H-01</td><td>Parches críticos ausentes (70 críticas Nessus)</td><td>D·I·C</td><td><span class="sev-crit">CRÍTICO</span></td><td>Cerrado</td></tr>
+        <tr><td>H-02</td><td>svc_sql/svc_backup con PasswordNeverExpires y db_owner en 3 BBDD</td><td>C·A</td><td><span class="sev-crit">CRÍTICO</span></td><td>Mitigado</td></tr>
+        <tr><td>H-03</td><td>Cuentas de servicio con SPN (Kerberoasting susceptible)</td><td>C·A</td><td><span class="sev-high">ALTO</span></td><td>Mitigado + detección</td></tr>
+        <tr><td>H-04</td><td>SMBv1 / NTLMv1 / LLMNR (estado base)</td><td>C·A·I</td><td><span class="sev-high">ALTO</span></td><td>Cerrado</td></tr>
+        <tr><td>H-05</td><td>SQL: xp_cmdshell / OLE Automation / CLR habilitados</td><td>I·C</td><td><span class="sev-high">ALTO</span></td><td>Cerrado</td></tr>
+        <tr><td>H-06</td><td>LAPS ausente en endpoints</td><td>C</td><td><span class="sev-high">MEDIO</span></td><td>Abierto (limitación lab)</td></tr>
+        <tr><td>H-07</td><td>Sin Credential Guard / sin modelo de tiering</td><td>C·A</td><td><span class="sev-high">MEDIO</span></td><td>Abierto (fuera de alcance)</td></tr>
+      </tbody></table></div>
+      <p>Marcar hallazgos como <strong>"Abierto" con su justificación</strong> es tan importante como cerrarlos: un informe que finge cerrarlo todo no es creíble.</p>
+    </section>
+
+<!-- HARDENING -->
+    <section id="hardening" class="content-section grp-soc">
+      <h2><span class="section-number">09</span> Hardening — plan de adecuación</h2>
+      <p>Con la matriz delante, remediamos por prioridad. Cada medida cierra un hallazgo concreto.</p>
+      <img src="img/hardening-1.png" alt="Primera medida de hardening aplicada" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Primera medida de hardening aplicada</p>
+      <img src="img/hardening-pol-pass.png" alt="Política de contraseñas reforzada y comprobación" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Política de contraseñas reforzada y comprobación</p>
+      <img src="img/hardening-pol-2.png" alt="Segunda política de contraseñas aplicada" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Segunda política de contraseñas aplicada</p>
+
+      <p>Empezamos por la higiene de identidad: política de contraseñas reforzada y su comprobación. La causa de las 70 críticas de Nessus son, en su mayoría, parches ausentes, así que la actualización completa es prioritaria.</p>
+      <img src="img/hardening-updates-dc1.png" alt="Actualización de DC01" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Actualización de DC01</p>
+      <img src="img/hardening-updates-pcs.png" alt="Actualización de los endpoints" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Actualización de los endpoints</p>
+
+      <p>Actualizamos servidores y endpoints — esto es lo que tumba el grueso de las vulnerabilidades críticas y altas.</p>
+      <img src="img/hardening-gpo.png" alt="Aplicación de medidas de hardening por GPO" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Aplicación de medidas de hardening por GPO</p>
+      <img src="img/hardening-3.png" alt="Tercera medida de hardening" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Tercera medida de hardening</p>
+      <img src="img/hardening-4.png" alt="Cuarta medida de hardening" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Cuarta medida de hardening</p>
+      <img src="img/hardening-5.png" alt="Medida de hardening replicada en DC01 y DC02" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Medida de hardening replicada en DC01 y DC02</p>
+
+      <p>El grueso del bastionado se aplica por <strong>GPO</strong> (nunca equipo por equipo). Cada bloque cubre un frente: protocolos inseguros, auditoría avanzada y restricciones, replicado en ambos controladores.</p>
+      <img src="img/hardening-sql.png" alt="Hardening de SQL Server en DC02" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Hardening de SQL Server en DC02</p>
+      <img src="img/hardening-ad2.png" alt="Medida de seguridad activada en DC02" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Medida de seguridad activada en DC02</p>
+
+      <p>En SQL Server cerramos los vectores clásicos: deshabilitamos <strong>xp_cmdshell</strong>, <strong>OLE Automation</strong> y <strong>CLR</strong>, y activamos la auditoría de SQL. Con esto H-05 queda cerrado.</p>
+    </section>
+
+<!-- FINAL -->
+    <section id="final" class="content-section grp-soc">
+      <h2><span class="section-number">10</span> Estado final — validación</h2>
+      <p>El éxito de una auditoría no es el bastionado: es <strong>demostrar la mejora con datos</strong>. Volvemos a pasar las mismas herramientas y comparamos.</p>
+      <div class="stat-row">
+        <div class="stat-card"><span class="stat-val green">55 &#8594; 30</span><span class="stat-label">PingCastle (riesgo)</span></div>
+        <div class="stat-card"><span class="stat-val green">70 &#8594; 0</span><span class="stat-label">Nessus · críticas</span></div>
+        <div class="stat-card"><span class="stat-val green">194 &#8594; 0</span><span class="stat-label">Nessus · altas</span></div>
+        <div class="stat-card"><span class="stat-val green">98–100%</span><span class="stat-label">Purple Knight</span></div>
+      </div>
+      <img src="img/final-nessus.png" alt="Escaneo final de Nessus sin críticas ni altas" loading="lazy" decoding="async" class="img-lab">
+      <p class="img-caption">Escaneo final de Nessus sin críticas ni altas</p>
+
+      <p>El Nessus final lo dice todo: las barras pasan a ser prácticamente informativas. De <strong>70 críticas y 194 altas a 0 y 0</strong>, quedando solo 2 medias y 1 baja residuales. La causa raíz se eliminó, no se ocultó.</p>
+      <div class="summary-table" style="overflow-x:auto"><table class="summary-table"><thead><tr><th>Herramienta</th><th>Antes</th><th>Después</th></tr></thead><tbody>
+        <tr><td>Nessus — críticas / altas</td><td>70 / 194</td><td>0 / 0</td></tr>
+        <tr><td>PingCastle — score de riesgo</td><td>55</td><td>30</td></tr>
+        <tr><td>Purple Knight — por categoría</td><td>indicadores en rojo</td><td>98–100%</td></tr>
+        <tr><td>BloodHound — rutas a Domain Admin</td><td>caminos presentes</td><td>re-ejecutado y revisado</td></tr>
+      </tbody></table></div>
+      <p>PingCastle baja de 55 a 30 por la mejora de higiene de identidad; Purple Knight confirma con 98–100% por categoría. Los hallazgos H-06 y H-07 permanecen abiertos y documentados como riesgo aceptado.</p>
+      <div class="ev-download">
+        <div class="ev-meta"><strong><i class="fas fa-shield-halved"></i>PingCastle — informe completo (estado final)</strong><span>HTML · score 30 tras el bastionado</span></div>
+        <div class="ev-btns"><a class="ev-btn" href="evidencias/pingcastle_final.html" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> Abrir informe</a></div>
+      </div>
+      <div class="ev-download">
+        <div class="ev-meta"><strong><i class="fas fa-user-shield"></i>Purple Knight — Security Assessment (estado final)</strong><span>HTML · 98–100% por categoría</span></div>
+        <div class="ev-btns"><a class="ev-btn" href="evidencias/purple_knight_final.html" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> Abrir informe</a></div>
+      </div>
+      <div class="ev-download">
+        <div class="ev-meta"><strong><i class="fas fa-file-code"></i>Nessus — export del escaneo final</strong><span>JSON · 0 críticas · 0 altas</span></div>
+        <div class="ev-btns"><a class="ev-btn alt" href="evidencias/nessus_final.json" download><i class="fas fa-download"></i> Descargar JSON</a></div>
+      </div>
+    </section>
+
+<!-- EVIDENCIAS -->
+    <section id="evidencias" class="content-section grp-soc">
+      <h2><span class="section-number">11</span> Anexo de evidencias</h2>
+      <p>Una auditoría se respalda con su evidencia cruda. Aquí están los <strong>informes completos</strong> generados por las herramientas y la revisión manual, tal cual salieron. El cuerpo del artículo muestra lo esencial; el detalle exhaustivo vive aquí.</p>
+      <div class="summary-table" style="overflow-x:auto"><table class="summary-table"><thead><tr><th>Evidencia</th><th>Fase</th><th>Informe</th></tr></thead><tbody>
+        <tr><td>PingCastle — informe HTML completo</td><td>Estado inicial</td><td><a href="evidencias/pingcastle_inicial.html" target="_blank" rel="noopener" class="bib-link">pingcastle_inicial.html <i class="fas fa-external-link-alt"></i></a></td></tr>
+        <tr><td>PingCastle — informe HTML completo</td><td>Estado final</td><td><a href="evidencias/pingcastle_final.html" target="_blank" rel="noopener" class="bib-link">pingcastle_final.html <i class="fas fa-external-link-alt"></i></a></td></tr>
+        <tr><td>Purple Knight — Security Assessment Report</td><td>Estado final</td><td><a href="evidencias/purple_knight_final.html" target="_blank" rel="noopener" class="bib-link">purple_knight_final.html <i class="fas fa-external-link-alt"></i></a></td></tr>
+        <tr><td>gpresult — GPOs realmente aplicadas (DC01)</td><td>Revisión manual</td><td><a href="evidencias/gpresult_dc01.html" target="_blank" rel="noopener" class="bib-link">gpresult_dc01.html <i class="fas fa-external-link-alt"></i></a></td></tr>
+        <tr><td>gpresult — GPOs realmente aplicadas (DC02)</td><td>Revisión manual</td><td><a href="evidencias/gpresult_dc02.html" target="_blank" rel="noopener" class="bib-link">gpresult_dc02.html <i class="fas fa-external-link-alt"></i></a></td></tr>
+        <tr><td>Nessus — exports JSON (antes/después)</td><td>Inicial / Final</td><td>evidencias/nessus_inicial.json · nessus_final.json</td></tr>
+      </tbody></table></div>
+      <p>Además, en la carpeta <code>evidencias/completo/</code> se incluye <strong>la totalidad de la prueba</strong>: las ~180 capturas por fase, los más de 40 ficheros de la revisión manual (cuentas, delegaciones, SMB/NTLM/LLMNR, LAPS, permisos SQL, SYSVOL…), los Nmap por host, los scripts de bastionado y las configuraciones.</p>
+    </section>
+
+    <!-- CONCLUSION -->
+    <section id="conclusion" class="content-section">
+      <h2><span class="section-number">12</span> Conclusión</h2>
+      <p>El valor no está en "pasar PingCastle" ni en el número, sino en el <strong>ciclo completo</strong>: desplegar con línea base segura, auditar configuración y vulnerabilidades, correlacionar hallazgos con impacto bajo DICAT, remediar la causa raíz y <strong>volver a medir</strong>.</p>
+
+      <p>Pasar de 70 críticas y 194 altas a cero, con el score de AD a la baja y los hallazgos abiertos documentados con honestidad, es lo que distingue una auditoría de un escaneo.</p>
+      <div class="quote"><p>"Una auditoría técnica sin marco normativo no es una auditoría, es un escaneo. Y un informe que finge cerrarlo todo no es profesional: lo profesional es cerrar la causa raíz, medir la mejora con datos y documentar con claridad lo que queda abierto y por qué."</p></div>
+    </section>
+
+<!-- BIBLIO -->
+    <section id="biblio" class="content-section">
+      <h2><span class="section-number">13</span> Bibliografía</h2>
+      <div class="bibliography-section"><div class="bibliography-list">
+        <div class="bib-item"><span class="bib-number">[1]</span><div class="bib-content"><strong>NIST SP 800-115 — Technical Guide to Information Security Testing and Assessment</strong><a href="https://nvlpubs.nist.gov/nistpubs/legacy/sp/nistspecialpublication800-115.pdf" target="_blank" rel="noopener" class="bib-link">nvlpubs.nist.gov <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[2]</span><div class="bib-content"><strong>Esquema Nacional de Seguridad — RD 311/2022 (CCN-CERT)</strong><a href="https://www.ccn-cert.cni.es/" target="_blank" rel="noopener" class="bib-link">ccn-cert.cni.es <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[3]</span><div class="bib-content"><strong>CIS Benchmarks — Center for Internet Security</strong><a href="https://www.cisecurity.org/cis-benchmarks" target="_blank" rel="noopener" class="bib-link">cisecurity.org/cis-benchmarks <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[4]</span><div class="bib-content"><strong>ISO/IEC 27001 — Information Security Management</strong><a href="https://www.iso.org/standard/27001" target="_blank" rel="noopener" class="bib-link">iso.org <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[5]</span><div class="bib-content"><strong>PingCastle — documentación</strong><a href="https://docs.netwrix.com/docs/pingcastle/" target="_blank" rel="noopener" class="bib-link">docs.netwrix.com <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[6]</span><div class="bib-content"><strong>Purple Knight — Semperis</strong><a href="https://www.semperis.com/purple-knight/" target="_blank" rel="noopener" class="bib-link">semperis.com/purple-knight <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[7]</span><div class="bib-content"><strong>BloodHound — documentación</strong><a href="https://bloodhound.specterops.io/" target="_blank" rel="noopener" class="bib-link">bloodhound.specterops.io <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[8]</span><div class="bib-content"><strong>Nessus — Tenable</strong><a href="https://www.tenable.com/products/nessus" target="_blank" rel="noopener" class="bib-link">tenable.com <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[9]</span><div class="bib-content"><strong>Wazuh — documentación</strong><a href="https://documentation.wazuh.com/" target="_blank" rel="noopener" class="bib-link">documentation.wazuh.com <i class="fas fa-external-link-alt"></i></a></div></div>
+        <div class="bib-item"><span class="bib-number">[10]</span><div class="bib-content"><strong>Kali Linux Tools — validación de herramientas</strong><a href="https://www.kali.org/tools/" target="_blank" rel="noopener" class="bib-link">kali.org/tools <i class="fas fa-external-link-alt"></i></a></div></div>
+      </div></div>
+    </section>
+
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-content">
+    <div class="footer-brand">
+      <span class="logo-text">AO</span>
+      <p>Ciberseguridad · Blue Team</p>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">Inicio</a>
+      <a href="blog.html">Blog</a>
+    </div>
+    <div class="footer-social">
+      <a href="https://github.com/tuusuario" target="_blank" rel="noopener"><i class="fab fa-github"></i></a>
+      <a href="https://linkedin.com/in/tuusuario" target="_blank" rel="noopener"><i class="fab fa-linkedin-in"></i></a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Alejandro Orcajada</p>
+  </div>
+</footer>
+
+<button class="back-to-top" id="back-to-top" aria-label="Volver arriba">
+  <i class="fas fa-arrow-up"></i>
+</button>
+
+<script>
+  /* Menú "Contenido" móvil */
+  (function () {
+    var toggle = document.getElementById('toc-toggle');
+    var menu = document.getElementById('toc-menu');
+    var closeBtn = document.getElementById('toc-menu-close');
+    if (!toggle || !menu) return;
+
+    function openMenu() {
+      menu.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeMenu() {
+      menu.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+    toggle.addEventListener('click', function () {
+      menu.classList.contains('open') ? closeMenu() : openMenu();
+    });
+    if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+
+    /* Al pulsar un apartado: cerrar y llevar al usuario a la sección */
+    menu.querySelectorAll('.toc-menu-nav a').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var target = document.querySelector(a.getAttribute('href'));
+        closeMenu();
+        if (target) {
+          setTimeout(function () {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 140);
+        }
+      });
+    });
+
+    /* Cerrar con ESC */
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && menu.classList.contains('open')) closeMenu();
+    });
+  })();
+</script>
+
+<script>
+  /* Reading progress */
+  window.addEventListener('scroll', () => {
+    const d = document.documentElement.scrollHeight - window.innerHeight;
+    document.getElementById('reading-progress').style.width = (window.scrollY / d * 100) + '%';
+  });
+
+  /* Navbar scroll */
+  window.addEventListener('scroll', () => {
+    document.querySelector('.navbar').classList.toggle('scrolled', window.scrollY > 50);
+  });
+
+  /* Back to top */
+  const btt = document.getElementById('back-to-top');
+  window.addEventListener('scroll', () => btt.classList.toggle('visible', window.scrollY > 500));
+  btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  /* Spotlight */
+  document.addEventListener('mousemove', e => {
+    document.getElementById('spotlight').style.background =
+      `radial-gradient(800px at ${e.clientX}px ${e.clientY}px, rgba(0,255,170,0.04), transparent 60%)`;
+  });
+
+  /* TOC */
+  const sections = document.querySelectorAll('.content-section');
+  const tocLinks = document.querySelectorAll('.toc-link');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        tocLinks.forEach(l => {
+          l.classList.remove('active');
+          if (l.getAttribute('href') === '#' + e.target.id) l.classList.add('active');
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -80% 0px' });
+  sections.forEach(s => obs.observe(s));
+  tocLinks.forEach(l => {
+    l.addEventListener('click', e => {
+      e.preventDefault();
+      const t = document.querySelector(l.getAttribute('href'));
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    const bar = document.getElementById('toc-bar');
+    if (bar) bar.style.height = (window.scrollY / h * 100) + '%';
+  });
+
+  /* Copy code */
+  function copyCode(btn) {
+    const code = btn.parentElement.nextElementSibling.textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+      setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copiar'; }, 2000);
+    });
+  }
+
+  /* Copy link */
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href);
+  }
+
+  /* Expandible code */
+  function toggleCode(id, btn) {
+    const wrap = document.getElementById(id);
+    wrap.classList.toggle('expanded');
+    const exp = wrap.classList.contains('expanded');
+    btn.innerHTML = '<i class="fas fa-chevron-' + (exp ? 'up' : 'down') + '"></i> ' + (exp ? 'Colapsar' : 'Ver código completo');
+    btn.classList.toggle('open', exp);
+     if (!exp) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* Lightbox */
+  (function(){
+    const overlay = document.getElementById('lb-overlay');
+    const lbImg = document.getElementById('lb-img');
+    const lbCap = document.getElementById('lb-caption');
+    const btnClose = document.getElementById('lb-close');
+    const btnPrev = document.getElementById('lb-prev');
+    const btnNext = document.getElementById('lb-next');
+    let imgs = [], cur = 0;
+
+    function open(i) {
+      cur = i;
+      lbImg.src = imgs[cur].src;
+      lbImg.alt = imgs[cur].alt;
+      lbCap.textContent = imgs[cur].alt || '';
+      overlay.classList.add('lb-open');
+      document.body.style.overflow = 'hidden';
+      btnPrev.style.opacity = cur > 0 ? '1' : '0.2';
+      btnNext.style.opacity = cur < imgs.length-1 ? '1' : '0.2';
+    }
+    function close() {
+      overlay.classList.remove('lb-open');
+      document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('img.img-lab').forEach((img, i) => {
+      imgs.push(img);
+      img.addEventListener('click', () => open(i));
+    });
+
+    btnClose.addEventListener('click', close);
+    btnPrev.addEventListener('click', () => { if(cur > 0) open(cur-1); });
+    btnNext.addEventListener('click', () => { if(cur < imgs.length-1) open(cur+1); });
+    overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+    document.addEventListener('keydown', e => {
+      if (!overlay.classList.contains('lb-open')) return;
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowLeft' && cur > 0) open(cur-1);
+      if (e.key === 'ArrowRight' && cur < imgs.length-1) open(cur+1);
+    });
+  })();
+</script>
+</body>
+</html>
